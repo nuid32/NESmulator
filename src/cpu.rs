@@ -207,6 +207,8 @@ impl CPU {
                 0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
                     self.lda(&instruction.addressing_mode)
                 }
+                // LDX
+                0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => self.ldx(&instruction.addressing_mode),
 
                 // STA
                 0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
@@ -252,6 +254,14 @@ impl CPU {
 
         self.register_a = value;
         self.update_zero_and_negative_flags(self.register_a);
+    }
+    // Load X Register
+    fn ldx(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+
+        self.register_x = value;
+        self.update_zero_and_negative_flags(self.register_x);
     }
 
     // Store Accumulator
@@ -320,6 +330,22 @@ mod tests {
         cpu.load_and_run(vec![0xA5, 0x08, 0x00]);
 
         assert_eq!(cpu.register_a, 0x01);
+    }
+
+    #[test]
+    fn test_0xa2_ldx_zero_flag() {
+        let mut cpu = CPU::new();
+
+        cpu.load_and_run(vec![0xA2, 0x00, 0x00]);
+        assert!(cpu.status.contains(CpuFlags::ZERO));
+    }
+    #[test]
+    fn test_0xa6_ldx_from_memory() {
+        let mut cpu = CPU::new();
+        cpu.mem_write(0x08, 0x18);
+
+        cpu.load_and_run(vec![0xA6, 0x08, 0x00]);
+        assert!(cpu.register_x == 0x18);
     }
 
     #[test]
