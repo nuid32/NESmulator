@@ -19,7 +19,6 @@ lazy_static::lazy_static! {
         OpCode::new(0xF8, "SED", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x78, "SEI", 1, 2, AddressingMode::NoneAddressing),
 
-
         OpCode::new(0xA9, "LDA", 2, 2, AddressingMode::Immediate),
         OpCode::new(0xA5, "LDA", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0xB5, "LDA", 2, 4, AddressingMode::ZeroPage_X),

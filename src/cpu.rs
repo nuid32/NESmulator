@@ -219,6 +219,8 @@ impl CPU {
                 // STY
                 0x84 | 0x94 | 0x8C => self.sty(&instruction.addressing_mode),
 
+                // Shift section
+
                 // TAX
                 0xAA => self.tax(),
                 // TXA
@@ -306,7 +308,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_0xa9_lda_immediate_load_data() {
+    fn test_lda_immediate_load_data() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xA9, 0x05, 0x00]);
 
@@ -316,14 +318,14 @@ mod tests {
     }
 
     #[test]
-    fn test_0xa9_lda_zero_flag() {
+    fn test_lda_zero_flag() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xA9, 0x00, 0x00]);
 
         assert!(cpu.status.contains(CpuFlags::ZERO));
     }
     #[test]
-    fn test_0xa5_lda_from_memory() {
+    fn test_lda_from_memory() {
         let mut cpu = CPU::new();
         cpu.mem_write(0x08, 0x01);
 
@@ -333,14 +335,14 @@ mod tests {
     }
 
     #[test]
-    fn test_0xa2_ldx_zero_flag() {
+    fn test_ldx_zero_flag() {
         let mut cpu = CPU::new();
 
         cpu.load_and_run(vec![0xA2, 0x00, 0x00]);
         assert!(cpu.status.contains(CpuFlags::ZERO));
     }
     #[test]
-    fn test_0xa6_ldx_from_memory() {
+    fn test_ldx_from_memory() {
         let mut cpu = CPU::new();
         cpu.mem_write(0x08, 0x18);
 
@@ -349,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn test_0xaa_tax_move_a_to_x() {
+    fn test_tax() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xAA, 0x00]);
         cpu.reset();
@@ -359,7 +361,7 @@ mod tests {
         assert!(cpu.register_x == 8);
     }
     #[test]
-    fn test_0x8a_txa_move_x_to_a() {
+    fn test_txa() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x8A, 0x00]);
         cpu.reset();
@@ -370,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn test_0xe8_inx_overflow() {
+    fn test_inx_overflow() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xE8, 0xE8, 0x00]);
         cpu.reset();
@@ -381,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn test_0x95_sta_store_accumulator() {
+    fn test_sta() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x95, 0x08, 0x00]);
         cpu.reset();
@@ -391,7 +393,7 @@ mod tests {
         assert_eq!(cpu.memory[0x08], 17);
     }
     #[test]
-    fn test_0x96_sta_store_accumulator() {
+    fn test_stx() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x96, 0x08, 0x00]);
         cpu.reset();
@@ -401,7 +403,7 @@ mod tests {
         assert_eq!(cpu.memory[0x08], 17);
     }
     #[test]
-    fn test_0x94_sta_store_accumulator() {
+    fn test_sty() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x94, 0x08, 0x00]);
         cpu.reset();
@@ -412,21 +414,21 @@ mod tests {
     }
 
     #[test]
-    fn test_0x38_set_carry_flag() {
+    fn test_sec() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0x38, 0x00]);
 
         assert!(cpu.status.contains(CpuFlags::CARRY));
     }
     #[test]
-    fn test_0x_f8_set_decimal_mode_flag() {
+    fn test_sed() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xF8, 0x00]);
 
         assert!(cpu.status.contains(CpuFlags::DECIMAL_MODE));
     }
     #[test]
-    fn test_0x78_set_interrupt_disable_flag() {
+    fn test_sei() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0x78, 0x00]);
 
@@ -434,7 +436,7 @@ mod tests {
     }
 
     #[test]
-    fn test_0x18_clear_carry_flag() {
+    fn test_clc() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x18, 0x00]);
         cpu.reset();
@@ -444,7 +446,7 @@ mod tests {
         assert!(!cpu.status.contains(CpuFlags::CARRY));
     }
     #[test]
-    fn test_0x_d8_clear_decimal_mode_flag() {
+    fn test_cld() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xD8, 0x00]);
         cpu.reset();
@@ -454,7 +456,7 @@ mod tests {
         assert!(!cpu.status.contains(CpuFlags::DECIMAL_MODE));
     }
     #[test]
-    fn test_0x58_clear_interrupt_disable_flag() {
+    fn test_cli() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x58, 0x00]);
         cpu.reset();
@@ -464,7 +466,7 @@ mod tests {
         assert!(!cpu.status.contains(CpuFlags::INTERRUPT_DISABLE));
     }
     #[test]
-    fn test_0x_b8_clear_overflow_flag() {
+    fn test_clv() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xB8, 0x00]);
         cpu.reset();
