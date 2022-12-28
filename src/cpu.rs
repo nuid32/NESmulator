@@ -221,6 +221,9 @@ impl CPU {
 
                 // Shift section
 
+                // ASL
+                0x0A | 0x06 | 0x16 | 0x0E | 0x1E => self.asl(&instruction.addressing_mode),
+
                 // TAX
                 0xAA => self.tax(),
                 // TXA
@@ -293,6 +296,21 @@ impl CPU {
     fn txa(&mut self) {
         self.register_a = self.register_x;
         self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    // Arithmetic Shift Left
+    fn asl(&mut self, mode: &AddressingMode) {
+        match mode {
+            AddressingMode::NoneAddressing => {
+                self.register_a = self.register_a << 1;
+                self.update_zero_and_negative_flags(self.register_a);
+            }
+            _ => {
+                let addr = self.get_operand_address(mode);
+                let value = self.mem_read(addr);
+                self.mem_write(addr, value << 1);
+            }
+        }
     }
 
     // Increment X Register
@@ -474,5 +492,27 @@ mod tests {
         cpu.run();
 
         assert!(!cpu.status.contains(CpuFlags::OVERFLOW));
+    }
+
+    #[test]
+    fn test_asl_reg_a() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x0A, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b1000_0000;
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 0);
+    }
+    #[test]
+    fn test_asl() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x06, 0x10, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x10, 0b1000_0000);
+        cpu.run();
+        let value = cpu.mem_read(0x10);
+
+        assert_eq!(value, 0);
     }
 }
