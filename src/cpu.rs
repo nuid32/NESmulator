@@ -236,6 +236,10 @@ impl CPU {
                 0x0A | 0x06 | 0x16 | 0x0E | 0x1E => self.asl(&instruction.addressing_mode),
                 // LSR
                 0x4A | 0x46 | 0x56 | 0x4E | 0x5E => self.lsr(&instruction.addressing_mode),
+                // ROL
+                0x2A | 0x26 | 0x36 | 0x2E | 0x3E => self.rol(&instruction.addressing_mode),
+                // ROR
+                0x6A | 0x66 | 0x76 | 0x6E | 0x7E => self.ror(&instruction.addressing_mode),
                 _ => unimplemented!(),
             }
 
@@ -369,6 +373,92 @@ impl CPU {
                     self.clear_carry_flag();
                 }
                 value = value >> 1;
+
+                self.mem_write(addr, value);
+                self.update_zero_and_negative_flags(value);
+            }
+        }
+    }
+    // Rotate left
+    fn rol(&mut self, mode: &AddressingMode) {
+        match mode {
+            AddressingMode::NoneAddressing => {
+                let mut value = self.register_a;
+                let old_carry = self.status.contains(CpuFlags::CARRY);
+
+                // Is bit 7 set
+                if value & 0b1000_0000 == 0b1000_0000 {
+                    self.set_carry_flag();
+                } else {
+                    self.clear_carry_flag();
+                }
+
+                value = value << 1;
+                if old_carry {
+                    value = value | 1;
+                }
+
+                self.register_a = value;
+                self.update_zero_and_negative_flags(self.register_x);
+            }
+            _ => {
+                let addr = self.get_operand_address(mode);
+                let mut value = self.mem_read(addr);
+                let old_carry = self.status.contains(CpuFlags::CARRY);
+
+                // Is bit 7 set
+                if value & 0b1000_0000 == 0b1000_0000 {
+                    self.set_carry_flag();
+                } else {
+                    self.clear_carry_flag();
+                }
+
+                value = value << 1;
+                if old_carry {
+                    value = value | 1;
+                }
+
+                self.mem_write(addr, value);
+                self.update_zero_and_negative_flags(value);
+            }
+        }
+    }
+    // Rotate right
+    fn ror(&mut self, mode: &AddressingMode) {
+        match mode {
+            AddressingMode::NoneAddressing => {
+                let mut value = self.register_a;
+                let old_carry = self.status.contains(CpuFlags::CARRY);
+
+                // Is bit 0 set
+                if value & 1 == 1 {
+                    self.set_carry_flag();
+                } else {
+                    self.clear_carry_flag();
+                }
+
+                value = value >> 1;
+                if old_carry {
+                    value = value | 0b1000_0000;
+                }
+                self.register_a = value;
+                self.update_zero_and_negative_flags(self.register_x);
+            }
+            _ => {
+                let addr = self.get_operand_address(mode);
+                let mut value = self.mem_read(addr);
+                let old_carry = self.status.contains(CpuFlags::CARRY);
+
+                if value & 1 == 1 {
+                    self.set_carry_flag();
+                } else {
+                    self.clear_carry_flag();
+                }
+
+                value = value >> 1;
+                if old_carry {
+                    value = value | 0b1000_0000;
+                }
 
                 self.mem_write(addr, value);
                 self.update_zero_and_negative_flags(value);
@@ -610,5 +700,57 @@ mod tests {
         let value = cpu.mem_read(0x10);
 
         assert_eq!(value, 0);
+    }
+
+    #[test]
+    fn test_rol_reg_a() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x2A, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b1100_0000;
+        cpu.run();
+
+        // If carry flag wasn't set before, then bit 0 will be 0
+        assert_eq!(cpu.register_a, 128);
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+    }
+    #[test]
+    fn test_rol() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x26, 0x10, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x10, 0b1100_0000);
+        cpu.run();
+        let value = cpu.mem_read(0x10);
+
+        assert_eq!(value, 128);
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+    }
+
+    #[test]
+    fn test_ror_reg_a() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x6A, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b0000_0011;
+        cpu.set_carry_flag();
+        cpu.run();
+
+        // If carry flag wasn't set before, then bit 0 will be 0
+        assert_eq!(cpu.register_a, 129);
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+    }
+    #[test]
+    fn test_ror() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x66, 0x10, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x10, 0b0000_0011);
+        cpu.set_carry_flag();
+        cpu.run();
+        let value = cpu.mem_read(0x10);
+
+        assert_eq!(value, 129);
+        assert!(cpu.status.contains(CpuFlags::CARRY));
     }
 }
