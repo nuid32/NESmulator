@@ -6,10 +6,15 @@ lazy_static::lazy_static! {
     #[rustfmt::skip]
     pub static ref CPU_OPS_CODES: Vec<OpCode> = vec![
         OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
-        OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
-        OpCode::new(0x8A, "TXA", 1, 2, AddressingMode::NoneAddressing),
+
+        // Increment section
         OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
 
+        // Transfer section
+        OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x8A, "TXA", 1, 2, AddressingMode::NoneAddressing),
+
+        // Flags section
         OpCode::new(0x18, "CLC", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0xD8, "CLD", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x58, "CLI", 1, 2, AddressingMode::NoneAddressing),
@@ -19,13 +24,7 @@ lazy_static::lazy_static! {
         OpCode::new(0xF8, "SED", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x78, "SEI", 1, 2, AddressingMode::NoneAddressing),
 
-
-        OpCode::new(0x0A, "ASL", 1, 2, AddressingMode::NoneAddressing),
-        OpCode::new(0x06, "ASL", 2, 5, AddressingMode::ZeroPage),
-        OpCode::new(0x16, "ASL", 2, 6, AddressingMode::ZeroPage_X),
-        OpCode::new(0x0E, "ASL", 3, 6, AddressingMode::Absolute),
-        OpCode::new(0x1E, "ASL", 3, 7, AddressingMode::Absolute_X),
-
+        // Load section
         OpCode::new(0xA9, "LDA", 2, 2, AddressingMode::Immediate),
         OpCode::new(0xA5, "LDA", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0xB5, "LDA", 2, 4, AddressingMode::ZeroPage_X),
@@ -41,6 +40,7 @@ lazy_static::lazy_static! {
         OpCode::new(0xAE, "LDX", 3, 4, AddressingMode::Absolute),
         OpCode::new(0xBE, "LDX", 3, 4/*(+1 if page crossed)*/, AddressingMode::Absolute_Y),
 
+        // Store section
         OpCode::new(0x85, "STA", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0x95, "STA", 2, 4, AddressingMode::ZeroPage_X),
         OpCode::new(0x8D, "STA", 3, 4, AddressingMode::Absolute),
@@ -56,6 +56,13 @@ lazy_static::lazy_static! {
         OpCode::new(0x84, "STY", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0x94, "STY", 2, 4, AddressingMode::ZeroPage_X),
         OpCode::new(0x8C, "STY", 3, 4, AddressingMode::Absolute),
+
+        // Shift section
+        OpCode::new(0x0A, "ASL", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x06, "ASL", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0x16, "ASL", 2, 6, AddressingMode::ZeroPage_X),
+        OpCode::new(0x0E, "ASL", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0x1E, "ASL", 3, 7, AddressingMode::Absolute_X),
     ];
 
     pub static ref OPSCODES_MAP: HashMap<u8, &'static OpCode> = {

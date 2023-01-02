@@ -176,6 +176,7 @@ impl CPU {
             let program_counter_old = self.program_counter;
 
             match opcode {
+                // BRK
                 0x00 => {
                     return;
                 }
@@ -183,7 +184,10 @@ impl CPU {
                 // INX
                 0xE8 => self.inx(),
 
-                // Flags section
+                // TAX
+                0xAA => self.tax(),
+                // TXA
+                0x8A => self.txa(),
 
                 // CLC
                 0x18 => self.status.remove(CpuFlags::CARRY),
@@ -201,8 +205,6 @@ impl CPU {
                 // SEI
                 0x78 => self.status.insert(CpuFlags::INTERRUPT_DISABLE),
 
-                // Load section
-
                 // LDA
                 0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
                     self.lda(&instruction.addressing_mode)
@@ -219,16 +221,8 @@ impl CPU {
                 // STY
                 0x84 | 0x94 | 0x8C => self.sty(&instruction.addressing_mode),
 
-                // Shift section
-
                 // ASL
                 0x0A | 0x06 | 0x16 | 0x0E | 0x1E => self.asl(&instruction.addressing_mode),
-
-                // TAX
-                0xAA => self.tax(),
-                // TXA
-                0x8A => self.txa(),
-
                 _ => unimplemented!(),
             }
 
@@ -250,6 +244,24 @@ impl CPU {
         } else {
             self.status.remove(CpuFlags::NEGATIVE);
         }
+    }
+
+    // Increment X Register
+    fn inx(&mut self) {
+        // With overflow emulation
+        self.register_x = self.register_x.wrapping_add(1);
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    // Transfer Accumulator to X
+    fn tax(&mut self) {
+        self.register_x = self.register_a;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+    // Transfer X to Accumulator
+    fn txa(&mut self) {
+        self.register_a = self.register_x;
+        self.update_zero_and_negative_flags(self.register_a);
     }
 
     // Load Accumulator
@@ -274,28 +286,15 @@ impl CPU {
         let addr = self.get_operand_address(mode);
         self.mem_write(addr, self.register_a);
     }
-
     // Store X Register
     fn stx(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         self.mem_write(addr, self.register_x);
     }
-
     // Store Y Register
     fn sty(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         self.mem_write(addr, self.register_y);
-    }
-
-    // Transfer Accumulator to X
-    fn tax(&mut self) {
-        self.register_x = self.register_a;
-        self.update_zero_and_negative_flags(self.register_x);
-    }
-    // Transfer X to Accumulator
-    fn txa(&mut self) {
-        self.register_a = self.register_x;
-        self.update_zero_and_negative_flags(self.register_a);
     }
 
     // Arithmetic Shift Left
@@ -311,13 +310,6 @@ impl CPU {
                 self.mem_write(addr, value << 1);
             }
         }
-    }
-
-    // Increment X Register
-    fn inx(&mut self) {
-        // With overflow emulation
-        self.register_x = self.register_x.wrapping_add(1);
-        self.update_zero_and_negative_flags(self.register_x);
     }
 }
 
