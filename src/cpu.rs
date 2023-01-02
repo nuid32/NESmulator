@@ -186,8 +186,16 @@ impl CPU {
 
                 // TAX
                 0xAA => self.tax(),
+                // TAY
+                0xA8 => self.tay(),
+                // TSX
+                0xBA => self.tsx(),
                 // TXA
                 0x8A => self.txa(),
+                // TXS
+                0x9A => self.txs(),
+                // TYA
+                0x98 => self.tya(),
 
                 // CLC
                 0x18 => self.status.remove(CpuFlags::CARRY),
@@ -258,9 +266,28 @@ impl CPU {
         self.register_x = self.register_a;
         self.update_zero_and_negative_flags(self.register_x);
     }
+    // Transfer Accumulator to Y
+    fn tay(&mut self) {
+        self.register_y = self.register_a;
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+    // Transfer Stack Pointer to X
+    fn tsx(&mut self) {
+        self.register_x = self.stack_pointer;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
     // Transfer X to Accumulator
     fn txa(&mut self) {
         self.register_a = self.register_x;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+    // Transfer X to Stack Pointer
+    fn txs(&mut self) {
+        self.stack_pointer = self.register_x;
+    }
+    // Transfer Y to Accumulator
+    fn tya(&mut self) {
+        self.register_a = self.register_y;
         self.update_zero_and_negative_flags(self.register_a);
     }
 
@@ -371,11 +398,51 @@ mod tests {
         assert!(cpu.register_x == 8);
     }
     #[test]
+    fn test_tay() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xA8, 0x00]);
+        cpu.reset();
+        cpu.register_a = 8;
+        cpu.run();
+
+        assert!(cpu.register_y == 8);
+    }
+    #[test]
+    fn test_tsx() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xBA, 0x00]);
+        cpu.reset();
+        cpu.stack_pointer = 8;
+        cpu.run();
+
+        assert!(cpu.register_x == 8);
+    }
+    #[test]
     fn test_txa() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x8A, 0x00]);
         cpu.reset();
         cpu.register_x = 8;
+        cpu.run();
+
+        assert!(cpu.register_a == 8);
+    }
+    #[test]
+    fn test_txs() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x9A, 0x00]);
+        cpu.reset();
+        cpu.register_x = 8;
+        cpu.run();
+
+        assert!(cpu.stack_pointer == 8);
+    }
+    #[test]
+    fn test_tya() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x98, 0x00]);
+        cpu.reset();
+        cpu.register_y = 8;
         cpu.run();
 
         assert!(cpu.register_a == 8);
