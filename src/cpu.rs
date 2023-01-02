@@ -1,4 +1,4 @@
-use crate::opcode::OPSCODES_MAP;
+use crate::opcode::OPCODES_MAP;
 use bitflags::bitflags;
 
 bitflags! {
@@ -23,7 +23,10 @@ bitflags! {
     }
 }
 
+// Since stack begins at 0x0100
 const STACK: u16 = 0x0100;
+// Some kind of init ritual
+// https://www.nesdev.org/wiki/CPU_power_up_state#cite_note-reset-stack-push-3
 const STACK_RESET: u8 = 0xFD;
 
 #[derive(Debug)]
@@ -169,7 +172,7 @@ impl CPU {
             let opcode = self.mem_read(self.program_counter);
             self.program_counter += 1;
 
-            let instruction = OPSCODES_MAP
+            let instruction = OPCODES_MAP
                 .get(&opcode)
                 .expect(&format!("Opcode {:x} is not recognized", opcode));
 
@@ -198,7 +201,7 @@ impl CPU {
                 0x98 => self.tya(),
 
                 // CLC
-                0x18 => self.status.remove(CpuFlags::CARRY),
+                0x18 => self.clear_carry_flag(),
                 // CLD
                 0xD8 => self.status.remove(CpuFlags::DECIMAL_MODE),
                 // CLI
@@ -207,7 +210,7 @@ impl CPU {
                 0xB8 => self.status.remove(CpuFlags::OVERFLOW),
 
                 // SEC
-                0x38 => self.status.insert(CpuFlags::CARRY),
+                0x38 => self.set_carry_flag(),
                 // SED
                 0xF8 => self.status.insert(CpuFlags::DECIMAL_MODE),
                 // SEI
@@ -231,6 +234,8 @@ impl CPU {
 
                 // ASL
                 0x0A | 0x06 | 0x16 | 0x0E | 0x1E => self.asl(&instruction.addressing_mode),
+                // LSR
+                0x4A | 0x46 | 0x56 | 0x4E | 0x5E => self.lsr(&instruction.addressing_mode),
                 _ => unimplemented!(),
             }
 
@@ -252,6 +257,13 @@ impl CPU {
         } else {
             self.status.remove(CpuFlags::NEGATIVE);
         }
+    }
+
+    fn set_carry_flag(&mut self) {
+        self.status.insert(CpuFlags::CARRY);
+    }
+    fn clear_carry_flag(&mut self) {
+        self.status.remove(CpuFlags::CARRY);
     }
 
     // Increment X Register
@@ -333,8 +345,33 @@ impl CPU {
             }
             _ => {
                 let addr = self.get_operand_address(mode);
-                let value = self.mem_read(addr);
-                self.mem_write(addr, value << 1);
+                let mut value = self.mem_read(addr);
+                value = value << 1;
+
+                self.mem_write(addr, value);
+                self.update_zero_and_negative_flags(value);
+            }
+        }
+    }
+    // Logical Shift Right
+    fn lsr(&mut self, mode: &AddressingMode) {
+        match mode {
+            AddressingMode::NoneAddressing => {
+                self.register_a = self.register_a >> 1;
+                self.update_zero_and_negative_flags(self.register_x);
+            }
+            _ => {
+                let addr = self.get_operand_address(mode);
+                let mut value = self.mem_read(addr);
+                if value & 1 == 1 {
+                    self.set_carry_flag();
+                } else {
+                    self.clear_carry_flag();
+                }
+                value = value >> 1;
+
+                self.mem_write(addr, value);
+                self.update_zero_and_negative_flags(value);
             }
         }
     }
@@ -517,7 +554,7 @@ mod tests {
         let mut cpu = CPU::new();
         cpu.load(vec![0x18, 0x00]);
         cpu.reset();
-        cpu.status.insert(CpuFlags::CARRY);
+        cpu.set_carry_flag();
         cpu.run();
 
         assert!(!cpu.status.contains(CpuFlags::CARRY));
