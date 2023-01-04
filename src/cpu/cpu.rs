@@ -1,5 +1,9 @@
-use crate::opcode::OPCODES_MAP;
+use super::{opcode::OPCODES_MAP, stackptr::StackPtr};
 use bitflags::bitflags;
+
+#[cfg(test)]
+#[path = "cpu_tests.rs"]
+mod cpu_tests;
 
 bitflags! {
 // NV2B DIZC
@@ -24,12 +28,6 @@ bitflags! {
     }
 }
 
-// Since stack begins at 0x0100
-const STACK: u16 = 0x0100;
-// Some kind of init ritual
-// https://www.nesdev.org/wiki/CPU_power_up_state#cite_note-reset-stack-push-3
-const STACK_RESET: u8 = 0xFD;
-
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
@@ -49,7 +47,7 @@ pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
-    pub stack_pointer: u8,
+    pub stackptr: StackPtr,
     pub status: CpuFlags,
     pub program_counter: u16,
     memory: [u8; 0xFFFF], // 65536 cells
@@ -61,7 +59,7 @@ impl CPU {
             register_a: 0,
             register_x: 0,
             register_y: 0,
-            stack_pointer: STACK_RESET,
+            stackptr: StackPtr::new(),
             status: CpuFlags::from_bits_truncate(0b00100100),
             program_counter: 0,
             memory: [0; 0xFFFF],
@@ -151,7 +149,7 @@ impl CPU {
         self.register_a = 0;
         self.register_x = 0;
         self.register_y = 0;
-        self.stack_pointer = STACK_RESET;
+        self.stackptr.reset();
         self.status = CpuFlags::from_bits_truncate(0b0010_0100);
 
         self.program_counter = self.mem_read_u16(0xFFFC);
@@ -283,16 +281,16 @@ impl CPU {
     }
 
     fn stack_push(&mut self, value: u8) {
-        self.mem_write((STACK as u16) + self.stack_pointer as u16, value);
-        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.mem_write(self.stackptr.addr(), value);
+        self.stackptr.inc();
     }
     fn stack_push_u16(&mut self, value: u16) {
-        self.mem_write_u16((STACK as u16) + self.stack_pointer as u16, value);
-        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.mem_write_u16(self.stackptr.addr(), value);
+        self.stackptr.inc();
     }
     fn stack_pop(&mut self) -> u8 {
-        self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        self.mem_read((STACK as u16) + self.stack_pointer as u16)
+        self.stackptr.dec();
+        self.mem_read(self.stackptr.addr())
     }
     fn stack_pop_u16(&mut self) -> u16 {
         let lo = self.stack_pop() as u16;
@@ -319,7 +317,7 @@ impl CPU {
     }
     // Transfer Stack Pointer to X
     fn tsx(&mut self) {
-        self.register_x = self.stack_pointer;
+        self.register_x = self.stackptr.rel_addr();
         self.update_zero_and_negative_flags(self.register_x);
     }
     // Transfer X to Accumulator
@@ -329,7 +327,7 @@ impl CPU {
     }
     // Transfer X to Stack Pointer
     fn txs(&mut self) {
-        self.stack_pointer = self.register_x;
+        self.stackptr.set(self.register_x);
     }
     // Transfer Y to Accumulator
     fn tya(&mut self) {
@@ -518,339 +516,5 @@ impl CPU {
         self.status.bits = self.stack_pop();
         self.status.remove(CpuFlags::BREAK);
         self.status.insert(CpuFlags::BREAK2);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_lda_immediate_load_data() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xA9, 0x05, 0x00]);
-
-        assert_eq!(cpu.register_a, 0x05);
-        assert!(!cpu.status.contains(CpuFlags::ZERO));
-        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
-    }
-
-    #[test]
-    fn test_lda_zero_flag() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xA9, 0x00, 0x00]);
-
-        assert!(cpu.status.contains(CpuFlags::ZERO));
-    }
-    #[test]
-    fn test_lda_from_memory() {
-        let mut cpu = CPU::new();
-        cpu.mem_write(0x08, 0x01);
-
-        cpu.load_and_run(vec![0xA5, 0x08, 0x00]);
-
-        assert_eq!(cpu.register_a, 0x01);
-    }
-
-    #[test]
-    fn test_ldx_zero_flag() {
-        let mut cpu = CPU::new();
-
-        cpu.load_and_run(vec![0xA2, 0x00, 0x00]);
-        assert!(cpu.status.contains(CpuFlags::ZERO));
-    }
-    #[test]
-    fn test_ldx_from_memory() {
-        let mut cpu = CPU::new();
-        cpu.mem_write(0x08, 0x18);
-
-        cpu.load_and_run(vec![0xA6, 0x08, 0x00]);
-        assert!(cpu.register_x == 0x18);
-    }
-
-    #[test]
-    fn test_tax() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0xAA, 0x00]);
-        cpu.reset();
-        cpu.register_a = 8;
-        cpu.run();
-
-        assert!(cpu.register_x == 8);
-    }
-    #[test]
-    fn test_tay() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0xA8, 0x00]);
-        cpu.reset();
-        cpu.register_a = 8;
-        cpu.run();
-
-        assert!(cpu.register_y == 8);
-    }
-    #[test]
-    fn test_tsx() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0xBA, 0x00]);
-        cpu.reset();
-        cpu.stack_pointer = 8;
-        cpu.run();
-
-        assert!(cpu.register_x == 8);
-    }
-    #[test]
-    fn test_txa() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x8A, 0x00]);
-        cpu.reset();
-        cpu.register_x = 8;
-        cpu.run();
-
-        assert!(cpu.register_a == 8);
-    }
-    #[test]
-    fn test_txs() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x9A, 0x00]);
-        cpu.reset();
-        cpu.register_x = 8;
-        cpu.run();
-
-        assert!(cpu.stack_pointer == 8);
-    }
-    #[test]
-    fn test_tya() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x98, 0x00]);
-        cpu.reset();
-        cpu.register_y = 8;
-        cpu.run();
-
-        assert!(cpu.register_a == 8);
-    }
-
-    #[test]
-    fn test_inx_overflow() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0xE8, 0xE8, 0x00]);
-        cpu.reset();
-        cpu.register_x = 0xFF;
-        cpu.run();
-
-        assert_eq!(cpu.register_x, 1);
-    }
-
-    #[test]
-    fn test_sta() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x95, 0x08, 0x00]);
-        cpu.reset();
-        cpu.register_a = 17;
-        cpu.run();
-
-        assert_eq!(cpu.memory[0x08], 17);
-    }
-    #[test]
-    fn test_stx() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x96, 0x08, 0x00]);
-        cpu.reset();
-        cpu.register_x = 17;
-        cpu.run();
-
-        assert_eq!(cpu.memory[0x08], 17);
-    }
-    #[test]
-    fn test_sty() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x94, 0x08, 0x00]);
-        cpu.reset();
-        cpu.register_y = 17;
-        cpu.run();
-
-        assert_eq!(cpu.memory[0x08], 17);
-    }
-
-    #[test]
-    fn test_sec() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0x38, 0x00]);
-
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-    }
-    #[test]
-    fn test_sed() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xF8, 0x00]);
-
-        assert!(cpu.status.contains(CpuFlags::DECIMAL_MODE));
-    }
-    #[test]
-    fn test_sei() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0x78, 0x00]);
-
-        assert!(cpu.status.contains(CpuFlags::INTERRUPT_DISABLE));
-    }
-
-    #[test]
-    fn test_clc() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x18, 0x00]);
-        cpu.reset();
-        cpu.set_carry_flag();
-        cpu.run();
-
-        assert!(!cpu.status.contains(CpuFlags::CARRY));
-    }
-    #[test]
-    fn test_cld() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0xD8, 0x00]);
-        cpu.reset();
-        cpu.status.insert(CpuFlags::DECIMAL_MODE);
-        cpu.run();
-
-        assert!(!cpu.status.contains(CpuFlags::DECIMAL_MODE));
-    }
-    #[test]
-    fn test_cli() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x58, 0x00]);
-        cpu.reset();
-        cpu.status.insert(CpuFlags::INTERRUPT_DISABLE);
-        cpu.run();
-
-        assert!(!cpu.status.contains(CpuFlags::INTERRUPT_DISABLE));
-    }
-    #[test]
-    fn test_clv() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0xB8, 0x00]);
-        cpu.reset();
-        cpu.status.insert(CpuFlags::OVERFLOW);
-        cpu.run();
-
-        assert!(!cpu.status.contains(CpuFlags::OVERFLOW));
-    }
-
-    #[test]
-    fn test_asl_reg_a() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x0A, 0x00]);
-        cpu.reset();
-        cpu.register_a = 0b1000_0000;
-        cpu.run();
-
-        assert_eq!(cpu.register_a, 0);
-    }
-    #[test]
-    fn test_asl() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x06, 0x10, 0x00]);
-        cpu.reset();
-        cpu.mem_write(0x10, 0b1000_0000);
-        cpu.run();
-        let value = cpu.mem_read(0x10);
-
-        assert_eq!(value, 0);
-    }
-
-    #[test]
-    fn test_rol_reg_a() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x2A, 0x00]);
-        cpu.reset();
-        cpu.register_a = 0b1100_0000;
-        cpu.run();
-
-        // If carry flag wasn't set before, then bit 0 will be 0
-        assert_eq!(cpu.register_a, 128);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-    }
-    #[test]
-    fn test_rol() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x26, 0x10, 0x00]);
-        cpu.reset();
-        cpu.mem_write(0x10, 0b1100_0000);
-        cpu.run();
-        let value = cpu.mem_read(0x10);
-
-        assert_eq!(value, 128);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-    }
-
-    #[test]
-    fn test_ror_reg_a() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x6A, 0x00]);
-        cpu.reset();
-        cpu.register_a = 0b0000_0011;
-        cpu.set_carry_flag();
-        cpu.run();
-
-        // If carry flag wasn't set before, then bit 0 will be 0
-        assert_eq!(cpu.register_a, 129);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-    }
-    #[test]
-    fn test_ror() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x66, 0x10, 0x00]);
-        cpu.reset();
-        cpu.mem_write(0x10, 0b0000_0011);
-        cpu.set_carry_flag();
-        cpu.run();
-        let value = cpu.mem_read(0x10);
-
-        assert_eq!(value, 129);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-    }
-
-    #[test]
-    fn test_pha() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x48, 0x00]);
-        cpu.reset();
-        cpu.register_a = 8;
-        cpu.run();
-        let value = cpu.stack_pop();
-
-        assert_eq!(value, 8);
-    }
-    #[test]
-    fn test_pla() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x68, 0x00]);
-        cpu.reset();
-        cpu.stack_push(8);
-        cpu.run();
-
-        assert_eq!(cpu.register_a, 8);
-    }
-
-    #[test]
-    fn test_php() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x08, 0x00]);
-        cpu.reset();
-        cpu.status.bits = 0b1100_0000;
-        cpu.run();
-        let value = cpu.stack_pop();
-
-        // PHP instruction must set 4 and 5 bits in status, BREAK and BREAK2 respectively
-        assert_eq!(value, 0b1111_0000);
-    }
-    #[test]
-    fn test_plp() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x28, 0x00]);
-        cpu.reset();
-        cpu.stack_push(0b0001_0000);
-        cpu.run();
-
-        // PLP sets 4 bit to 0 and 5 bit to 1 while pulling. BREAK is 0, BREAK2 is 1
-        assert_eq!(cpu.status.bits, 0b0010_0000);
     }
 }

@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use crate::cpu::AddressingMode;
+use super::cpu::AddressingMode;
 
+// If addressing mode is Absolute_X/Y or Indirect_Y there will be 1 more cycle if page is crossed
+// https://www.nesdev.org/obelisk-6502-guide/reference.html
 lazy_static::lazy_static! {
     #[rustfmt::skip]
     pub static ref CPU_OPS_CODES: Vec<OpCode> = vec![
@@ -33,16 +35,16 @@ lazy_static::lazy_static! {
         OpCode::new(0xA5, "LDA", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0xB5, "LDA", 2, 4, AddressingMode::ZeroPage_X),
         OpCode::new(0xAD, "LDA", 3, 4, AddressingMode::Absolute),
-        OpCode::new(0xBD, "LDA", 3, 4/*(+1 if page crossed)*/, AddressingMode::Absolute_X),
-        OpCode::new(0xB9, "LDA", 3, 4/*(+1 if page crossed)*/, AddressingMode::Absolute_Y),
+        OpCode::new(0xBD, "LDA", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0xB9, "LDA", 3, 4, AddressingMode::Absolute_Y),
         OpCode::new(0xA1, "LDA", 2, 6, AddressingMode::Indirect_X),
-        OpCode::new(0xB1, "LDA", 2, 5/*(+1 if page crossed)*/, AddressingMode::Indirect_Y),
+        OpCode::new(0xB1, "LDA", 2, 5, AddressingMode::Indirect_Y),
 
         OpCode::new(0xA2, "LDX", 2, 2, AddressingMode::Immediate),
         OpCode::new(0xA6, "LDX", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0xB6, "LDX", 2, 4, AddressingMode::ZeroPage_Y),
         OpCode::new(0xAE, "LDX", 3, 4, AddressingMode::Absolute),
-        OpCode::new(0xBE, "LDX", 3, 4/*(+1 if page crossed)*/, AddressingMode::Absolute_Y),
+        OpCode::new(0xBE, "LDX", 3, 4, AddressingMode::Absolute_Y),
 
         // Store section
         OpCode::new(0x85, "STA", 2, 3, AddressingMode::ZeroPage),
