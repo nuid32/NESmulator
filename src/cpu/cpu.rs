@@ -241,9 +241,11 @@ impl CPU {
 
             match opcode {
                 // BRK
-                0x00 => {
-                    return;
-                }
+                0x00 => return,
+                //NOP
+                0xEA => (),
+                // BIT
+                0x24 | 0x2C => self.bit(&instruction.addressing_mode),
 
                 // TAX
                 0xAA => self.tax(),
@@ -280,6 +282,8 @@ impl CPU {
                 }
                 // LDX
                 0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => self.ldx(&instruction.addressing_mode),
+                // LDY
+                0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => self.ldy(&instruction.addressing_mode),
 
                 // STA
                 0x85 | 0x95 | 0x8D | 0x9D | 0x99 | 0x81 | 0x91 => {
@@ -371,12 +375,39 @@ impl CPU {
                 // RTS
                 0x60 => self.rts(),
 
+                // ADC
+                0x69 | 0x65 | 0x75 | 0x6D | 0x7D | 0x79 | 0x61 | 0x71 => {
+                    self.adc(&instruction.addressing_mode)
+                }
+                // SBC
+                0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
+                    self.sbc(&instruction.addressing_mode)
+                }
+
                 _ => unimplemented!(),
             }
 
             if self.program_counter == program_counter_old {
                 self.program_counter += instruction.bytes as u16 - 1;
             }
+        }
+    }
+
+    // Bit Test
+    fn bit(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+
+        if value & self.register_a == 0 {
+            self.set_flag(CpuFlags::ZERO);
+        } else {
+            self.clear_flag(CpuFlags::ZERO);
+        }
+        if value & 0b1000_0000 == 0b1000_0000 {
+            self.set_flag(CpuFlags::NEGATIVE);
+        }
+        if value & 0b0100_0000 == 0b0100_0000 {
+            self.set_flag(CpuFlags::OVERFLOW);
         }
     }
 
@@ -418,6 +449,13 @@ impl CPU {
         let value = self.mem_read(addr);
 
         self.set_register_x(value);
+    }
+    // Load Y Register
+    fn ldy(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+
+        self.set_register_y(value);
     }
 
     // Store Accumulator
@@ -770,5 +808,61 @@ impl CPU {
     // Return from Subroutine
     fn rts(&mut self) {
         self.program_counter = self.stack_pop_u16() + 1;
+    }
+
+    fn add_to_register_a(&mut self, value: u8) {}
+    fn adc(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        let mut sum = (self.register_a as u16) + (value as u16);
+
+        if self.status.contains(CpuFlags::CARRY) {
+            sum += 1;
+        }
+
+        let carry = sum > 0xFF;
+
+        if carry {
+            self.set_flag(CpuFlags::CARRY);
+        } else {
+            self.clear_flag(CpuFlags::CARRY);
+        }
+
+        let result = sum as u8;
+
+        if (value ^ result) & (result ^ self.register_a) & 0b1000_0000 != 0 {
+            self.set_flag(CpuFlags::OVERFLOW);
+        } else {
+            self.clear_flag(CpuFlags::OVERFLOW);
+        }
+
+        self.set_register_a(result);
+    }
+    fn sbc(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr).wrapping_neg();
+        let mut sum = (self.register_a as u16) + (value as u16);
+
+        if self.status.contains(CpuFlags::CARRY) {
+            sum += 1;
+        }
+
+        let carry = sum > 0xFF;
+
+        if carry {
+            self.set_flag(CpuFlags::CARRY);
+        } else {
+            self.clear_flag(CpuFlags::CARRY);
+        }
+
+        let result = sum as u8;
+
+        if (value ^ result) & (result ^ self.register_a) & 0b1000_0000 != 0 {
+            self.set_flag(CpuFlags::OVERFLOW);
+        } else {
+            self.clear_flag(CpuFlags::OVERFLOW);
+        }
+
+        self.set_register_a(result);
     }
 }

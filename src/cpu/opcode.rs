@@ -9,6 +9,11 @@ lazy_static::lazy_static! {
     pub static ref CPU_OPS_CODES: Vec<OpCode> = vec![
         OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
 
+        OpCode::new(0xEA, "NOP", 1, 2, AddressingMode::NoneAddressing),
+
+        OpCode::new(0x24, "BIT", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x2C, "BIT", 3, 4, AddressingMode::Absolute),
+
         // Transfer section
         OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
 
@@ -52,6 +57,12 @@ lazy_static::lazy_static! {
         OpCode::new(0xB6, "LDX", 2, 4, AddressingMode::ZeroPage_Y),
         OpCode::new(0xAE, "LDX", 3, 4, AddressingMode::Absolute),
         OpCode::new(0xBE, "LDX", 3, 4, AddressingMode::Absolute_Y),
+
+        OpCode::new(0xA0, "LDY", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xA4, "LDY", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xB4, "LDY", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0xAC, "LDY", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xBC, "LDY", 3, 4, AddressingMode::Absolute_X),
 
         // Store section
         OpCode::new(0x85, "STA", 2, 3, AddressingMode::ZeroPage),
@@ -204,6 +215,26 @@ lazy_static::lazy_static! {
         OpCode::new(0x60, "RTS", 1, 6, AddressingMode::NoneAddressing),
 
         OpCode::new(0x40, "RTI", 1, 6, AddressingMode::NoneAddressing),
+
+
+        // With carry section?
+        OpCode::new(0x69, "ADC", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0x65, "ADC", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x75, "ADC", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0x6D, "ADC", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x7D, "ADC", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0x79, "ADC", 3, 4, AddressingMode::Absolute_Y),
+        OpCode::new(0x61, "ADC", 2, 6, AddressingMode::Indirect_X),
+        OpCode::new(0x71, "ADC", 2, 5, AddressingMode::Indirect_Y),
+
+        OpCode::new(0xE9, "SBC", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xE5, "SBC", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xF5, "SBC", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0xED, "SBC", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xFD, "SBC", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0xF9, "SBC", 3, 4, AddressingMode::Absolute_Y),
+        OpCode::new(0xE1, "SBC", 2, 6, AddressingMode::Indirect_X),
+        OpCode::new(0xF1, "SBC", 2, 5, AddressingMode::Indirect_Y),
     ];
 
     pub static ref OPCODES_MAP: HashMap<u8, &'static OpCode> = {

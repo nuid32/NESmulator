@@ -510,4 +510,57 @@ mod cpu_tests {
         // CPU must jump over 0x00 instruction to 0xE8 and then return from subroutine
         assert_eq!(cpu.register_x, 2);
     }
+
+    #[test]
+    fn test_adc_carry() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x6D, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b1000_0000;
+        cpu.mem_write(0x10, 0b1000_0000);
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 0b0000_0000);
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlags::OVERFLOW));
+    }
+    #[test]
+    fn test_adc_overflow() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x6D, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b0100_0000;
+        cpu.mem_write(0x10, 0b0100_0000);
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 0b1000_0000);
+        assert!(!cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlags::OVERFLOW));
+    }
+    #[test]
+    fn test_sbc() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xED, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        cpu.register_a = 1;
+        cpu.mem_write(0x10, -1i8 as u8);
+        cpu.run();
+
+        assert_eq!(cpu.register_a as i8, 2 as i8);
+    }
+    #[test]
+    fn test_bit() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x2C, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b0000_0010;
+        cpu.mem_write(0x10, 0b1100_0010);
+        cpu.run();
+
+        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlags::OVERFLOW));
+        assert!(!cpu.status.contains(CpuFlags::ZERO));
+    }
 }
