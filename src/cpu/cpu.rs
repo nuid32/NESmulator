@@ -89,6 +89,58 @@ impl CPU {
         self.mem_write(pos + 1, hi);
     }
 
+    fn update_zero_and_negative_flags(&mut self, result: u8) {
+        if result == 0 {
+            self.status.insert(CpuFlags::ZERO);
+        } else {
+            self.status.remove(CpuFlags::ZERO);
+        }
+
+        if result & 0b1000_0000 != 0 {
+            self.status.insert(CpuFlags::NEGATIVE);
+        } else {
+            self.status.remove(CpuFlags::NEGATIVE);
+        }
+    }
+
+    fn set_carry_flag(&mut self) {
+        self.status.insert(CpuFlags::CARRY);
+    }
+    fn clear_carry_flag(&mut self) {
+        self.status.remove(CpuFlags::CARRY);
+    }
+
+    fn stack_push(&mut self, value: u8) {
+        self.mem_write(self.stackptr.addr(), value);
+        self.stackptr.inc();
+    }
+    fn stack_push_u16(&mut self, value: u16) {
+        self.mem_write_u16(self.stackptr.addr(), value);
+        self.stackptr.inc();
+    }
+    fn stack_pop(&mut self) -> u8 {
+        self.stackptr.dec();
+        self.mem_read(self.stackptr.addr())
+    }
+    fn stack_pop_u16(&mut self) -> u16 {
+        let lo = self.stack_pop() as u16;
+        let hi = self.stack_pop() as u16;
+        hi << 8 | lo
+    }
+
+    fn set_register_a(&mut self, value: u8) {
+        self.register_a = value;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+    fn set_register_x(&mut self, value: u8) {
+        self.register_x = value;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+    fn set_register_y(&mut self, value: u8) {
+        self.register_y = value;
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
     fn get_operand_address(&mut self, mode: &AddressingMode) -> u16 {
         match mode {
             AddressingMode::Immediate => self.program_counter,
@@ -272,71 +324,27 @@ impl CPU {
         }
     }
 
-    fn update_zero_and_negative_flags(&mut self, result: u8) {
-        if result == 0 {
-            self.status.insert(CpuFlags::ZERO);
-        } else {
-            self.status.remove(CpuFlags::ZERO);
-        }
-
-        if result & 0b1000_0000 != 0 {
-            self.status.insert(CpuFlags::NEGATIVE);
-        } else {
-            self.status.remove(CpuFlags::NEGATIVE);
-        }
-    }
-
-    fn set_carry_flag(&mut self) {
-        self.status.insert(CpuFlags::CARRY);
-    }
-    fn clear_carry_flag(&mut self) {
-        self.status.remove(CpuFlags::CARRY);
-    }
-
-    fn stack_push(&mut self, value: u8) {
-        self.mem_write(self.stackptr.addr(), value);
-        self.stackptr.inc();
-    }
-    fn stack_push_u16(&mut self, value: u16) {
-        self.mem_write_u16(self.stackptr.addr(), value);
-        self.stackptr.inc();
-    }
-    fn stack_pop(&mut self) -> u8 {
-        self.stackptr.dec();
-        self.mem_read(self.stackptr.addr())
-    }
-    fn stack_pop_u16(&mut self) -> u16 {
-        let lo = self.stack_pop() as u16;
-        let hi = self.stack_pop() as u16;
-        hi << 8 | lo
-    }
-
     // Increment X Register
     fn inx(&mut self) {
         // With overflow emulation
-        self.register_x = self.register_x.wrapping_add(1);
-        self.update_zero_and_negative_flags(self.register_x);
+        self.set_register_x(self.register_x.wrapping_add(1));
     }
 
     // Transfer Accumulator to X
     fn tax(&mut self) {
-        self.register_x = self.register_a;
-        self.update_zero_and_negative_flags(self.register_x);
+        self.set_register_x(self.register_a);
     }
     // Transfer Accumulator to Y
     fn tay(&mut self) {
-        self.register_y = self.register_a;
-        self.update_zero_and_negative_flags(self.register_y);
+        self.set_register_y(self.register_a);
     }
     // Transfer Stack Pointer to X
     fn tsx(&mut self) {
-        self.register_x = self.stackptr.rel_addr();
-        self.update_zero_and_negative_flags(self.register_x);
+        self.set_register_x(self.stackptr.rel_addr());
     }
     // Transfer X to Accumulator
     fn txa(&mut self) {
-        self.register_a = self.register_x;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.set_register_a(self.register_x);
     }
     // Transfer X to Stack Pointer
     fn txs(&mut self) {
@@ -344,8 +352,7 @@ impl CPU {
     }
     // Transfer Y to Accumulator
     fn tya(&mut self) {
-        self.register_a = self.register_y;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.set_register_a(self.register_y);
     }
 
     // Load Accumulator
@@ -353,16 +360,14 @@ impl CPU {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
 
-        self.register_a = value;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.set_register_a(value);
     }
     // Load X Register
     fn ldx(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
 
-        self.register_x = value;
-        self.update_zero_and_negative_flags(self.register_x);
+        self.set_register_x(value);
     }
 
     // Store Accumulator
@@ -385,8 +390,7 @@ impl CPU {
     fn asl(&mut self, mode: &AddressingMode) {
         match mode {
             AddressingMode::NoneAddressing => {
-                self.register_a = self.register_a << 1;
-                self.update_zero_and_negative_flags(self.register_a);
+                self.set_register_a(self.register_a << 1);
             }
             _ => {
                 let addr = self.get_operand_address(mode);
@@ -402,8 +406,7 @@ impl CPU {
     fn lsr(&mut self, mode: &AddressingMode) {
         match mode {
             AddressingMode::NoneAddressing => {
-                self.register_a = self.register_a >> 1;
-                self.update_zero_and_negative_flags(self.register_x);
+                self.set_register_a(self.register_a >> 1);
             }
             _ => {
                 let addr = self.get_operand_address(mode);
@@ -439,8 +442,7 @@ impl CPU {
                     value = value | 1;
                 }
 
-                self.register_a = value;
-                self.update_zero_and_negative_flags(self.register_x);
+                self.set_register_a(value);
             }
             _ => {
                 let addr = self.get_operand_address(mode);
@@ -482,8 +484,7 @@ impl CPU {
                 if old_carry {
                     value = value | 0b1000_0000;
                 }
-                self.register_a = value;
-                self.update_zero_and_negative_flags(self.register_x);
+                self.set_register_a(value);
             }
             _ => {
                 let addr = self.get_operand_address(mode);
@@ -513,8 +514,8 @@ impl CPU {
     }
     // Pull Accumulator
     fn pla(&mut self, mode: &AddressingMode) {
-        self.register_a = self.stack_pop();
-        self.update_zero_and_negative_flags(self.register_a);
+        let value = self.stack_pop();
+        self.set_register_a(value);
     }
 
     // Push Processor Status
@@ -535,21 +536,18 @@ impl CPU {
     fn and(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
-        self.register_a = self.register_a & value;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.set_register_a(self.register_a & value);
     }
     // Logical Inclusive OR
     fn ora(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
-        self.register_a = value | self.register_a;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.set_register_a(value | self.register_a);
     }
     // Exclusive OR
     fn eor(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
-        self.register_a = value ^ self.register_a;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.set_register_a(value ^ self.register_a);
     }
 }
