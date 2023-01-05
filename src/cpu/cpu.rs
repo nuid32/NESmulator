@@ -89,6 +89,16 @@ impl CPU {
         self.mem_write(pos + 1, hi);
     }
 
+    fn branch(&mut self) {
+        let jump = self.mem_read(self.program_counter) as i8;
+        let jump_addr = self
+            .program_counter
+            .wrapping_add(1)
+            .wrapping_add(jump as u16);
+
+        self.program_counter = jump_addr;
+    }
+
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
             self.status.insert(CpuFlags::ZERO);
@@ -314,6 +324,23 @@ impl CPU {
                 0x49 | 0x45 | 0x55 | 0x4D | 0x5D | 0x59 | 0x41 | 0x51 => {
                     self.eor(&instruction.addressing_mode)
                 }
+
+                // BPL
+                0x10 => self.bpl(&instruction.addressing_mode),
+                // BMI
+                0x30 => self.bmi(&instruction.addressing_mode),
+                // BVC
+                0x50 => self.bvc(&instruction.addressing_mode),
+                // BVS
+                0x70 => self.bvs(&instruction.addressing_mode),
+                // BCC
+                0x90 => self.bcc(&instruction.addressing_mode),
+                // BCS
+                0xB0 => self.bcs(&instruction.addressing_mode),
+                // BNE
+                0xD0 => self.bne(&instruction.addressing_mode),
+                // BEQ
+                0xF0 => self.beq(&instruction.addressing_mode),
 
                 _ => unimplemented!(),
             }
@@ -549,5 +576,54 @@ impl CPU {
         let addr = self.get_operand_address(mode);
         let value = self.mem_read(addr);
         self.set_register_a(value ^ self.register_a);
+    }
+
+    // Branch if Positive
+    fn bpl(&mut self, mode: &AddressingMode) {
+        if !self.status.contains(CpuFlags::NEGATIVE) {
+            self.branch();
+        }
+    }
+    // Branch if Minus
+    fn bmi(&mut self, mode: &AddressingMode) {
+        if self.status.contains(CpuFlags::ZERO) {
+            self.branch();
+        }
+    }
+    // Branch if Overflow Clear
+    fn bvc(&mut self, mode: &AddressingMode) {
+        if !self.status.contains(CpuFlags::OVERFLOW) {
+            self.branch();
+        }
+    }
+    // Branch if Overflow Set
+    fn bvs(&mut self, mode: &AddressingMode) {
+        if self.status.contains(CpuFlags::OVERFLOW) {
+            self.branch();
+        }
+    }
+    // Branch if Carry Clear
+    fn bcc(&mut self, mode: &AddressingMode) {
+        if !self.status.contains(CpuFlags::CARRY) {
+            self.branch();
+        }
+    }
+    // Branch if Carry Set
+    fn bcs(&mut self, mode: &AddressingMode) {
+        if self.status.contains(CpuFlags::CARRY) {
+            self.branch();
+        }
+    }
+    // Branch if Not Equal
+    fn bne(&mut self, mode: &AddressingMode) {
+        if !self.status.contains(CpuFlags::ZERO) {
+            self.branch();
+        }
+    }
+    // Branch if Equal
+    fn beq(&mut self, mode: &AddressingMode) {
+        if self.status.contains(CpuFlags::ZERO) {
+            self.branch();
+        }
     }
 }
