@@ -245,9 +245,6 @@ impl CPU {
                     return;
                 }
 
-                // INX
-                0xE8 => self.inx(),
-
                 // TAX
                 0xAA => self.tax(),
                 // TAY
@@ -326,21 +323,21 @@ impl CPU {
                 }
 
                 // BPL
-                0x10 => self.bpl(&instruction.addressing_mode),
+                0x10 => self.bpl(),
                 // BMI
-                0x30 => self.bmi(&instruction.addressing_mode),
+                0x30 => self.bmi(),
                 // BVC
-                0x50 => self.bvc(&instruction.addressing_mode),
+                0x50 => self.bvc(),
                 // BVS
-                0x70 => self.bvs(&instruction.addressing_mode),
+                0x70 => self.bvs(),
                 // BCC
-                0x90 => self.bcc(&instruction.addressing_mode),
+                0x90 => self.bcc(),
                 // BCS
-                0xB0 => self.bcs(&instruction.addressing_mode),
+                0xB0 => self.bcs(),
                 // BNE
-                0xD0 => self.bne(&instruction.addressing_mode),
+                0xD0 => self.bne(),
                 // BEQ
-                0xF0 => self.beq(&instruction.addressing_mode),
+                0xF0 => self.beq(),
 
                 // CMP
                 0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
@@ -351,6 +348,13 @@ impl CPU {
                 // CPY
                 0xC0 | 0xC4 | 0xCC => self.cpy(&instruction.addressing_mode),
 
+                // INC
+                0xE6 | 0xF6 | 0xEE | 0xFE => self.inc(&instruction.addressing_mode),
+                // INX
+                0xE8 => self.inx(),
+                // INY
+                0xC8 => self.iny(),
+
                 _ => unimplemented!(),
             }
 
@@ -358,12 +362,6 @@ impl CPU {
                 self.program_counter += instruction.bytes as u16 - 1;
             }
         }
-    }
-
-    // Increment X Register
-    fn inx(&mut self) {
-        // With overflow emulation
-        self.set_register_x(self.register_x.wrapping_add(1));
     }
 
     // Transfer Accumulator to X
@@ -588,49 +586,49 @@ impl CPU {
     }
 
     // Branch if Positive
-    fn bpl(&mut self, mode: &AddressingMode) {
+    fn bpl(&mut self) {
         if !self.status.contains(CpuFlags::NEGATIVE) {
             self.branch();
         }
     }
     // Branch if Minus
-    fn bmi(&mut self, mode: &AddressingMode) {
+    fn bmi(&mut self) {
         if self.status.contains(CpuFlags::ZERO) {
             self.branch();
         }
     }
     // Branch if Overflow Clear
-    fn bvc(&mut self, mode: &AddressingMode) {
+    fn bvc(&mut self) {
         if !self.status.contains(CpuFlags::OVERFLOW) {
             self.branch();
         }
     }
     // Branch if Overflow Set
-    fn bvs(&mut self, mode: &AddressingMode) {
+    fn bvs(&mut self) {
         if self.status.contains(CpuFlags::OVERFLOW) {
             self.branch();
         }
     }
     // Branch if Carry Clear
-    fn bcc(&mut self, mode: &AddressingMode) {
+    fn bcc(&mut self) {
         if !self.status.contains(CpuFlags::CARRY) {
             self.branch();
         }
     }
     // Branch if Carry Set
-    fn bcs(&mut self, mode: &AddressingMode) {
+    fn bcs(&mut self) {
         if self.status.contains(CpuFlags::CARRY) {
             self.branch();
         }
     }
     // Branch if Not Equal
-    fn bne(&mut self, mode: &AddressingMode) {
+    fn bne(&mut self) {
         if !self.status.contains(CpuFlags::ZERO) {
             self.branch();
         }
     }
     // Branch if Equal
-    fn beq(&mut self, mode: &AddressingMode) {
+    fn beq(&mut self) {
         if self.status.contains(CpuFlags::ZERO) {
             self.branch();
         }
@@ -677,5 +675,22 @@ impl CPU {
         }
 
         self.update_zero_and_negative_flags(self.register_y.wrapping_sub(value));
+    }
+
+    // Increment Memory
+    fn inc(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr).wrapping_add(1);
+
+        self.mem_write(addr, value);
+        self.update_zero_and_negative_flags(value);
+    }
+    // Increment X Register
+    fn inx(&mut self) {
+        self.set_register_x(self.register_x.wrapping_add(1));
+    }
+    // Increment Y Register
+    fn iny(&mut self) {
+        self.set_register_y(self.register_y.wrapping_add(1));
     }
 }

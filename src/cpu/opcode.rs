@@ -9,25 +9,32 @@ lazy_static::lazy_static! {
     pub static ref CPU_OPS_CODES: Vec<OpCode> = vec![
         OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
 
-        // Increment section
-        OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
-
         // Transfer section
         OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0xA8, "TAY", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0xBA, "TSX", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0x8A, "TXA", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0x9A, "TXS", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0x98, "TYA", 1, 2, AddressingMode::NoneAddressing),
 
         // Flags section
         OpCode::new(0x18, "CLC", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0xD8, "CLD", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0x58, "CLI", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0xB8, "CLV", 1, 2, AddressingMode::NoneAddressing),
 
         OpCode::new(0x38, "SEC", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0xF8, "SED", 1, 2, AddressingMode::NoneAddressing),
+
         OpCode::new(0x78, "SEI", 1, 2, AddressingMode::NoneAddressing),
 
         // Load section
@@ -165,6 +172,16 @@ lazy_static::lazy_static! {
         OpCode::new(0xC0, "CPY", 2, 2, AddressingMode::Immediate),
         OpCode::new(0xC4, "CPY", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0xCC, "CPY", 3, 4, AddressingMode::Absolute),
+
+        // Increment section
+        OpCode::new(0xE6, "INC", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0xF6, "INC", 2, 6, AddressingMode::ZeroPage_X),
+        OpCode::new(0xEE, "INC", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0xFE, "INC", 3, 7, AddressingMode::Absolute_X),
+
+        OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
+
+        OpCode::new(0xC8, "INY", 1, 2, AddressingMode::NoneAddressing),
     ];
 
     pub static ref OPCODES_MAP: HashMap<u8, &'static OpCode> = {
