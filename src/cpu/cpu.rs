@@ -247,8 +247,21 @@ impl CPU {
 
                 // PHP
                 0x08 => self.php(&instruction.addressing_mode),
-                //PLP
+                // PLP
                 0x28 => self.plp(&instruction.addressing_mode),
+
+                // AND
+                0x29 | 0x25 | 0x35 | 0x2D | 0x3D | 0x39 | 0x21 | 0x31 => {
+                    self.and(&instruction.addressing_mode)
+                }
+                // ORA
+                0x09 | 0x05 | 0x15 | 0x0D | 0x1D | 0x19 | 0x01 | 0x11 => {
+                    self.ora(&instruction.addressing_mode)
+                }
+                // EOR
+                0x49 | 0x45 | 0x55 | 0x4D | 0x5D | 0x59 | 0x41 | 0x51 => {
+                    self.eor(&instruction.addressing_mode)
+                }
 
                 _ => unimplemented!(),
             }
@@ -516,5 +529,27 @@ impl CPU {
         self.status.bits = self.stack_pop();
         self.status.remove(CpuFlags::BREAK);
         self.status.insert(CpuFlags::BREAK2);
+    }
+
+    // Logical AND
+    fn and(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.register_a = self.register_a & value;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+    // Logical Inclusive OR
+    fn ora(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.register_a = value | self.register_a;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+    // Exclusive OR
+    fn eor(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+        self.register_a = value ^ self.register_a;
+        self.update_zero_and_negative_flags(self.register_a);
     }
 }

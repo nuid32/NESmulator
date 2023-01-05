@@ -99,6 +99,35 @@ lazy_static::lazy_static! {
         OpCode::new(0x08, "PHP", 1, 3, AddressingMode::NoneAddressing),
 
         OpCode::new(0x28, "PLP", 1, 4, AddressingMode::NoneAddressing),
+
+
+        // Logical section
+        OpCode::new(0x29, "AND", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0x25, "AND", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x35, "AND", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0x2D, "AND", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x3D, "AND", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0x39, "AND", 3, 4, AddressingMode::Absolute_Y),
+        OpCode::new(0x21, "AND", 2, 6, AddressingMode::Indirect_X),
+        OpCode::new(0x31, "AND", 2, 5, AddressingMode::Indirect_Y),
+
+        OpCode::new(0x09, "ORA", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0x05, "ORA", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x15, "ORA", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0x0D, "ORA", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x1D, "ORA", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0x19, "ORA", 3, 4, AddressingMode::Absolute_Y),
+        OpCode::new(0x01, "ORA", 2, 6, AddressingMode::Indirect_X),
+        OpCode::new(0x11, "ORA", 2, 5, AddressingMode::Indirect_Y),
+
+        OpCode::new(0x49, "EOR", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0x45, "EOR", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x55, "EOR", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0x4D, "EOR", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x5D, "EOR", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0x59, "EOR", 3, 4, AddressingMode::Absolute_Y),
+        OpCode::new(0x41, "EOR", 2, 6, AddressingMode::Indirect_X),
+        OpCode::new(0x51, "EOR", 2, 5, AddressingMode::Indirect_Y),
     ];
 
     pub static ref OPCODES_MAP: HashMap<u8, &'static OpCode> = {

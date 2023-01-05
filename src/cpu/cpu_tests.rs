@@ -331,4 +331,38 @@ mod cpu_tests {
         // PLP sets 4 bit to 0 and 5 bit to 1 while pulling. BREAK is 0, BREAK2 is 1
         assert_eq!(cpu.status.bits, 0b0010_0000);
     }
+
+    #[test]
+    fn test_and() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x2D, 0x10, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b1111_0000;
+        cpu.mem_write(0x10, 0b0011_1100);
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 0b0011_0000);
+    }
+    #[test]
+    fn test_ora() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x0D, 0x10, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b1111_0000;
+        cpu.mem_write(0x10, 0b1111_1111);
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 0b1111_1111);
+    }
+    #[test]
+    fn test_eor() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x4D, 0x10, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b1111_1111;
+        cpu.mem_write(0x10, 0b1111_0111);
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 0b0000_1000);
+    }
 }
