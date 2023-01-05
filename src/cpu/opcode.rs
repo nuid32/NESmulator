@@ -193,6 +193,17 @@ lazy_static::lazy_static! {
         OpCode::new(0xCA, "DEX", 1, 2, AddressingMode::NoneAddressing),
 
         OpCode::new(0x88, "DEY", 1, 2, AddressingMode::NoneAddressing),
+
+
+        // Jump section
+        OpCode::new(0x4C, "JMP", 3, 3, AddressingMode::Absolute),
+        OpCode::new(0x6C, "JMP", 3, 5, AddressingMode::NoneAddressing),    // Actually it have Indirect addressing mode, but it not bounded with any register so...
+
+        OpCode::new(0x20, "JSR", 3, 6, AddressingMode::Absolute),
+
+        OpCode::new(0x60, "RTS", 1, 6, AddressingMode::NoneAddressing),
+
+        OpCode::new(0x40, "RTI", 1, 6, AddressingMode::NoneAddressing),
     ];
 
     pub static ref OPCODES_MAP: HashMap<u8, &'static OpCode> = {

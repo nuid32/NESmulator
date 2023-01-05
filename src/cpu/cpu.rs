@@ -362,6 +362,15 @@ impl CPU {
                 // DEY
                 0x88 => self.dey(),
 
+                // JMP
+                0x4C | 0x6C => self.jmp(&instruction.addressing_mode),
+                // JSR
+                0x20 => self.jsr(),
+                // RTI
+                0x40 => self.rti(),
+                // RTS
+                0x60 => self.rts(),
+
                 _ => unimplemented!(),
             }
 
@@ -716,5 +725,50 @@ impl CPU {
     // Decrement Y Register
     fn dey(&mut self) {
         self.set_register_y(self.register_y.wrapping_sub(1));
+    }
+
+    // Jump
+    fn jmp(&mut self, mode: &AddressingMode) {
+        match mode {
+            AddressingMode::Absolute => {
+                let addr = self.mem_read_u16(self.program_counter);
+                self.program_counter = addr;
+            }
+            AddressingMode::NoneAddressing => {
+                let addr = self.mem_read_u16(self.program_counter);
+
+                // 6502 does not correctly fetch the target address if indirect vector falls on a page boundary
+                // (e.g. $xxFF where xx is any value from $00 to $FF). In this case it fetches the LSB from $xxFF as expected
+                // but takes the MSB from $xx00. Fixed in some later chips.
+                let indirect_ref = if addr & 0x00FF == 0x00FF {
+                    let lo = self.mem_read(addr);
+                    let hi = self.mem_read(addr & 0xFF00);
+                    (hi as u16) << 8 | (lo as u16)
+                } else {
+                    self.mem_read_u16(addr)
+                };
+
+                self.program_counter = indirect_ref;
+            }
+            _ => unreachable!(),
+        }
+    }
+    // Jump to Subroutine
+    fn jsr(&mut self) {
+        self.stack_push_u16(self.program_counter + 2 - 1);
+        let addr = self.mem_read_u16(self.program_counter);
+        self.program_counter = addr;
+    }
+    // Return from Interrupt
+    fn rti(&mut self) {
+        self.status.bits = self.stack_pop();
+        self.clear_flag(CpuFlags::BREAK);
+        self.clear_flag(CpuFlags::BREAK2);
+
+        self.program_counter = self.stack_pop_u16();
+    }
+    // Return from Subroutine
+    fn rts(&mut self) {
+        self.program_counter = self.stack_pop_u16() + 1;
     }
 }

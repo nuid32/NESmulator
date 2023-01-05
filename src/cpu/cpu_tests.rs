@@ -489,4 +489,25 @@ mod cpu_tests {
 
         assert_eq!(cpu.register_y, 255);
     }
+
+    #[test]
+    fn test_jmp() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x4C, 0x04, 0x80, 0xE8, 0x00]);
+        cpu.reset();
+        cpu.run();
+
+        // CPU must jump over the 0xE8 instruction, which increments x registers value
+        assert_eq!(cpu.register_x, 0);
+    }
+    #[test]
+    fn test_jsr_rts() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x20, 0x05, 0x80, 0xE8, 0x00, 0xE8, 0x60]);
+        cpu.reset();
+        cpu.run();
+
+        // CPU must jump over 0x00 instruction to 0xE8 and then return from subroutine
+        assert_eq!(cpu.register_x, 2);
+    }
 }
