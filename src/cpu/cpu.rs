@@ -101,23 +101,23 @@ impl CPU {
 
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
-            self.status.insert(CpuFlags::ZERO);
+            self.set_flag(CpuFlags::ZERO);
         } else {
-            self.status.remove(CpuFlags::ZERO);
+            self.clear_flag(CpuFlags::ZERO);
         }
 
         if result & 0b1000_0000 != 0 {
-            self.status.insert(CpuFlags::NEGATIVE);
+            self.set_flag(CpuFlags::NEGATIVE);
         } else {
-            self.status.remove(CpuFlags::NEGATIVE);
+            self.clear_flag(CpuFlags::NEGATIVE);
         }
     }
 
-    fn set_carry_flag(&mut self) {
-        self.status.insert(CpuFlags::CARRY);
+    fn set_flag(&mut self, flag: CpuFlags) {
+        self.status.insert(flag);
     }
-    fn clear_carry_flag(&mut self) {
-        self.status.remove(CpuFlags::CARRY);
+    fn clear_flag(&mut self, flag: CpuFlags) {
+        self.status.remove(flag);
     }
 
     fn stack_push(&mut self, value: u8) {
@@ -262,20 +262,20 @@ impl CPU {
                 0x98 => self.tya(),
 
                 // CLC
-                0x18 => self.clear_carry_flag(),
+                0x18 => self.clear_flag(CpuFlags::CARRY),
                 // CLD
-                0xD8 => self.status.remove(CpuFlags::DECIMAL_MODE),
+                0xD8 => self.clear_flag(CpuFlags::DECIMAL_MODE),
                 // CLI
-                0x58 => self.status.remove(CpuFlags::INTERRUPT_DISABLE),
+                0x58 => self.clear_flag(CpuFlags::INTERRUPT_DISABLE),
                 // CLV
-                0xB8 => self.status.remove(CpuFlags::OVERFLOW),
+                0xB8 => self.clear_flag(CpuFlags::OVERFLOW),
 
                 // SEC
-                0x38 => self.set_carry_flag(),
+                0x38 => self.set_flag(CpuFlags::CARRY),
                 // SED
-                0xF8 => self.status.insert(CpuFlags::DECIMAL_MODE),
+                0xF8 => self.set_flag(CpuFlags::DECIMAL_MODE),
                 // SEI
-                0x78 => self.status.insert(CpuFlags::INTERRUPT_DISABLE),
+                0x78 => self.set_flag(CpuFlags::INTERRUPT_DISABLE),
 
                 // LDA
                 0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
@@ -341,6 +341,15 @@ impl CPU {
                 0xD0 => self.bne(&instruction.addressing_mode),
                 // BEQ
                 0xF0 => self.beq(&instruction.addressing_mode),
+
+                // CMP
+                0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
+                    self.cmp(&instruction.addressing_mode)
+                }
+                // CPX
+                0xE0 | 0xE4 | 0xEC => self.cpx(&instruction.addressing_mode),
+                // CPY
+                0xC0 | 0xC4 | 0xCC => self.cpy(&instruction.addressing_mode),
 
                 _ => unimplemented!(),
             }
@@ -439,9 +448,9 @@ impl CPU {
                 let addr = self.get_operand_address(mode);
                 let mut value = self.mem_read(addr);
                 if value & 1 == 1 {
-                    self.set_carry_flag();
+                    self.set_flag(CpuFlags::CARRY);
                 } else {
-                    self.clear_carry_flag();
+                    self.clear_flag(CpuFlags::CARRY);
                 }
                 value = value >> 1;
 
@@ -459,9 +468,9 @@ impl CPU {
 
                 // Is bit 7 set
                 if value & 0b1000_0000 == 0b1000_0000 {
-                    self.set_carry_flag();
+                    self.set_flag(CpuFlags::CARRY);
                 } else {
-                    self.clear_carry_flag();
+                    self.clear_flag(CpuFlags::CARRY);
                 }
 
                 value = value << 1;
@@ -478,9 +487,9 @@ impl CPU {
 
                 // Is bit 7 set
                 if value & 0b1000_0000 == 0b1000_0000 {
-                    self.set_carry_flag();
+                    self.set_flag(CpuFlags::CARRY);
                 } else {
-                    self.clear_carry_flag();
+                    self.clear_flag(CpuFlags::CARRY);
                 }
 
                 value = value << 1;
@@ -502,9 +511,9 @@ impl CPU {
 
                 // Is bit 0 set
                 if value & 1 == 1 {
-                    self.set_carry_flag();
+                    self.set_flag(CpuFlags::CARRY);
                 } else {
-                    self.clear_carry_flag();
+                    self.clear_flag(CpuFlags::CARRY);
                 }
 
                 value = value >> 1;
@@ -519,9 +528,9 @@ impl CPU {
                 let old_carry = self.status.contains(CpuFlags::CARRY);
 
                 if value & 1 == 1 {
-                    self.set_carry_flag();
+                    self.set_flag(CpuFlags::CARRY);
                 } else {
-                    self.clear_carry_flag();
+                    self.clear_flag(CpuFlags::CARRY);
                 }
 
                 value = value >> 1;
@@ -555,8 +564,8 @@ impl CPU {
     // Pull Processor Status
     fn plp(&mut self, mode: &AddressingMode) {
         self.status.bits = self.stack_pop();
-        self.status.remove(CpuFlags::BREAK);
-        self.status.insert(CpuFlags::BREAK2);
+        self.clear_flag(CpuFlags::BREAK);
+        self.set_flag(CpuFlags::BREAK2);
     }
 
     // Logical AND
@@ -625,5 +634,48 @@ impl CPU {
         if self.status.contains(CpuFlags::ZERO) {
             self.branch();
         }
+    }
+
+    // Compare
+    fn cmp(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+
+        if self.register_a >= value {
+            self.set_flag(CpuFlags::CARRY);
+        }
+        if self.register_a == value {
+            self.set_flag(CpuFlags::ZERO);
+        }
+
+        self.update_zero_and_negative_flags(self.register_a.wrapping_sub(value));
+    }
+    // Compare X Register
+    fn cpx(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+
+        if self.register_x >= value {
+            self.set_flag(CpuFlags::CARRY);
+        }
+        if self.register_x == value {
+            self.set_flag(CpuFlags::ZERO);
+        }
+
+        self.update_zero_and_negative_flags(self.register_x.wrapping_sub(value));
+    }
+    // Compare Y Register
+    fn cpy(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr);
+
+        if self.register_y >= value {
+            self.set_flag(CpuFlags::CARRY);
+        }
+        if self.register_y == value {
+            self.set_flag(CpuFlags::ZERO);
+        }
+
+        self.update_zero_and_negative_flags(self.register_y.wrapping_sub(value));
     }
 }

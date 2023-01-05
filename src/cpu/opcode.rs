@@ -146,6 +146,25 @@ lazy_static::lazy_static! {
         OpCode::new(0xD0, "BNE", 2, 2/*+1 if succeeded, +2 if to a new page*/, AddressingMode::NoneAddressing),
 
         OpCode::new(0xF0, "BEQ", 2, 2/*+1 if succeeded, +2 if to a new page*/, AddressingMode::NoneAddressing),
+
+
+        // Compare section
+        OpCode::new(0xC9, "CMP", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xC5, "CMP", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xD5, "CMP", 2, 4, AddressingMode::ZeroPage_X),
+        OpCode::new(0xCD, "CMP", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xDD, "CMP", 3, 4, AddressingMode::Absolute_X),
+        OpCode::new(0xD9, "CMP", 3, 4, AddressingMode::Absolute_Y),
+        OpCode::new(0xC1, "CMP", 2, 6, AddressingMode::Indirect_X),
+        OpCode::new(0xD1, "CMP", 2, 5, AddressingMode::Indirect_Y),
+
+        OpCode::new(0xE0, "CPX", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xE4, "CPX", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xEC, "CPX", 3, 4, AddressingMode::Absolute),
+
+        OpCode::new(0xC0, "CPY", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xC4, "CPY", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xCC, "CPY", 3, 4, AddressingMode::Absolute),
     ];
 
     pub static ref OPCODES_MAP: HashMap<u8, &'static OpCode> = {

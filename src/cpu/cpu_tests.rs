@@ -176,7 +176,7 @@ mod cpu_tests {
         let mut cpu = CPU::new();
         cpu.load(vec![0x18, 0x00]);
         cpu.reset();
-        cpu.set_carry_flag();
+        cpu.set_flag(CpuFlags::CARRY);
         cpu.run();
 
         assert!(!cpu.status.contains(CpuFlags::CARRY));
@@ -265,7 +265,7 @@ mod cpu_tests {
         cpu.load(vec![0x6A, 0x00]);
         cpu.reset();
         cpu.register_a = 0b0000_0011;
-        cpu.set_carry_flag();
+        cpu.set_flag(CpuFlags::CARRY);
         cpu.run();
 
         // If carry flag wasn't set before, then bit 0 will be 0
@@ -278,7 +278,7 @@ mod cpu_tests {
         cpu.load(vec![0x66, 0x10, 0x00]);
         cpu.reset();
         cpu.mem_write(0x10, 0b0000_0011);
-        cpu.set_carry_flag();
+        cpu.set_flag(CpuFlags::CARRY);
         cpu.run();
         let value = cpu.mem_read(0x10);
 
@@ -364,5 +364,75 @@ mod cpu_tests {
         cpu.run();
 
         assert_eq!(cpu.register_a, 0b0000_1000);
+    }
+
+    #[test]
+    fn test_cmp() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xCD, 0x10, 0x00]);
+        cpu.reset();
+        cpu.register_a = 0b0000_0001;
+        cpu.mem_write(0x10, 0b0000_0001);
+        cpu.run();
+
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlags::ZERO));
+        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+
+        cpu.program_counter -= 3;
+        cpu.reset();
+        cpu.register_a = 0b0000_0000;
+        cpu.mem_write(0x10, 0b0000_0001);
+        cpu.run();
+
+        assert!(!cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+    }
+    #[test]
+    fn test_cpx() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xEC, 0x10, 0x00]);
+        cpu.reset();
+        cpu.register_x = 0b0000_0001;
+        cpu.mem_write(0x10, 0b0000_0001);
+        cpu.run();
+
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlags::ZERO));
+        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+
+        cpu.program_counter -= 3;
+        cpu.reset();
+        cpu.register_x = 0b0000_0000;
+        cpu.mem_write(0x10, 0b0000_0001);
+        cpu.run();
+
+        assert!(!cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+    }
+    #[test]
+    fn test_cpy() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xCC, 0x10, 0x00]);
+        cpu.reset();
+        cpu.register_y = 0b0000_0001;
+        cpu.mem_write(0x10, 0b0000_0001);
+        cpu.run();
+
+        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlags::ZERO));
+        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+
+        cpu.program_counter -= 3;
+        cpu.reset();
+        cpu.register_y = 0b0000_0000;
+        cpu.mem_write(0x10, 0b0000_0001);
+        cpu.run();
+
+        assert!(!cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
     }
 }
