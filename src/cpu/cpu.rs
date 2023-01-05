@@ -300,14 +300,14 @@ impl CPU {
                 0x6A | 0x66 | 0x76 | 0x6E | 0x7E => self.ror(&instruction.addressing_mode),
 
                 // PHA
-                0x48 => self.pha(&instruction.addressing_mode),
+                0x48 => self.pha(),
                 // PLA
-                0x68 => self.pla(&instruction.addressing_mode),
+                0x68 => self.pla(),
 
                 // PHP
-                0x08 => self.php(&instruction.addressing_mode),
+                0x08 => self.php(),
                 // PLP
-                0x28 => self.plp(&instruction.addressing_mode),
+                0x28 => self.plp(),
 
                 // AND
                 0x29 | 0x25 | 0x35 | 0x2D | 0x3D | 0x39 | 0x21 | 0x31 => {
@@ -354,6 +354,13 @@ impl CPU {
                 0xE8 => self.inx(),
                 // INY
                 0xC8 => self.iny(),
+
+                // DEC
+                0xC6 | 0xD6 | 0xCE | 0xDE => self.dec(&instruction.addressing_mode),
+                // DEX
+                0xCA => self.dex(),
+                // DEY
+                0x88 => self.dey(),
 
                 _ => unimplemented!(),
             }
@@ -543,24 +550,24 @@ impl CPU {
     }
 
     // Push Accumulator
-    fn pha(&mut self, mode: &AddressingMode) {
+    fn pha(&mut self) {
         self.stack_push(self.register_a);
     }
     // Pull Accumulator
-    fn pla(&mut self, mode: &AddressingMode) {
+    fn pla(&mut self) {
         let value = self.stack_pop();
         self.set_register_a(value);
     }
 
     // Push Processor Status
-    fn php(&mut self, mode: &AddressingMode) {
+    fn php(&mut self) {
         let mut flags = self.status.clone();
         flags.insert(CpuFlags::BREAK);
         flags.insert(CpuFlags::BREAK2);
         self.stack_push(flags.bits);
     }
     // Pull Processor Status
-    fn plp(&mut self, mode: &AddressingMode) {
+    fn plp(&mut self) {
         self.status.bits = self.stack_pop();
         self.clear_flag(CpuFlags::BREAK);
         self.set_flag(CpuFlags::BREAK2);
@@ -692,5 +699,22 @@ impl CPU {
     // Increment Y Register
     fn iny(&mut self) {
         self.set_register_y(self.register_y.wrapping_add(1));
+    }
+
+    // Decrement Memory
+    fn dec(&mut self, mode: &AddressingMode) {
+        let addr = self.get_operand_address(mode);
+        let value = self.mem_read(addr).wrapping_sub(1);
+
+        self.mem_write(addr, value);
+        self.update_zero_and_negative_flags(value);
+    }
+    // Decrement X Register
+    fn dex(&mut self) {
+        self.set_register_x(self.register_x.wrapping_sub(1));
+    }
+    // Decrement Y Register
+    fn dey(&mut self) {
+        self.set_register_y(self.register_y.wrapping_sub(1));
     }
 }

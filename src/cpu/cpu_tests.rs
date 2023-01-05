@@ -458,4 +458,35 @@ mod cpu_tests {
 
         assert_eq!(cpu.register_y, 0);
     }
+
+    #[test]
+    fn test_dec_underflow() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xCE, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        cpu.mem_write(0x10, 0);
+        cpu.run();
+
+        assert_eq!(cpu.mem_read(0x10), 255);
+    }
+    #[test]
+    fn test_dex_underflow() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xCA, 0x00]);
+        cpu.reset();
+        cpu.register_x = 0;
+        cpu.run();
+
+        assert_eq!(cpu.register_x, 255);
+    }
+    #[test]
+    fn test_dey_underflow() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0x88, 0x00]);
+        cpu.reset();
+        cpu.register_y = 0;
+        cpu.run();
+
+        assert_eq!(cpu.register_y, 255);
+    }
 }

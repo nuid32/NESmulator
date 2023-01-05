@@ -182,6 +182,17 @@ lazy_static::lazy_static! {
         OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
 
         OpCode::new(0xC8, "INY", 1, 2, AddressingMode::NoneAddressing),
+
+
+        // Decrement section
+        OpCode::new(0xC6, "DEC", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0xD6, "DEC", 2, 6, AddressingMode::ZeroPage_X),
+        OpCode::new(0xCE, "DEC", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0xDE, "DEC", 3, 7, AddressingMode::Absolute_X),
+
+        OpCode::new(0xCA, "DEX", 1, 2, AddressingMode::NoneAddressing),
+
+        OpCode::new(0x88, "DEY", 1, 2, AddressingMode::NoneAddressing),
     ];
 
     pub static ref OPCODES_MAP: HashMap<u8, &'static OpCode> = {
@@ -196,7 +207,9 @@ lazy_static::lazy_static! {
 pub struct OpCode {
     pub code: u8,
     pub mnemonic: &'static str,
+    // How many bytes instruction will read (including opcode)
     pub bytes: u8,
+    // https://www.nesdev.org/wiki/Cycle_counting
     pub cycles: u8,
     pub addressing_mode: AddressingMode,
 }
