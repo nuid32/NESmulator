@@ -1,3 +1,5 @@
+use crate::{bus::Bus, memory::Memory};
+
 use super::{opcode::OPCODES_MAP, stackptr::StackPtr};
 use bitflags::bitflags;
 
@@ -49,8 +51,24 @@ pub struct CPU {
     pub register_y: u8,
     pub stackptr: StackPtr,
     pub status: CpuFlag,
-    pub pc: u16,          // Program Counter
-    memory: [u8; 0xFFFF], // 65536 cells
+    pub pc: u16, // Program Counter
+    pub bus: Bus,
+}
+
+impl Memory for CPU {
+    fn mem_read(&self, addr: u16) -> u8 {
+        self.bus.mem_read(addr)
+    }
+    fn mem_read_u16(&self, addr: u16) -> u16 {
+        self.bus.mem_read_u16(addr)
+    }
+
+    fn mem_write(&mut self, addr: u16, value: u8) {
+        self.bus.mem_write(addr, value);
+    }
+    fn mem_write_u16(&mut self, addr: u16, value: u16) {
+        self.bus.mem_write_u16(addr, value);
+    }
 }
 
 impl CPU {
@@ -62,31 +80,8 @@ impl CPU {
             stackptr: StackPtr::new(),
             status: CpuFlag::from_bits_truncate(0b00100100),
             pc: 0,
-            memory: [0; 0xFFFF],
+            bus: Bus::new(),
         }
-    }
-
-    pub fn mem_read(&self, addr: u16) -> u8 {
-        self.memory[addr as usize]
-    }
-
-    pub fn mem_write(&mut self, addr: u16, value: u8) {
-        self.memory[addr as usize] = value;
-    }
-
-    fn mem_read_u16(&mut self, pos: u16) -> u16 {
-        let lo = self.mem_read(pos);
-        let hi = self.mem_read(pos + 1);
-
-        u16::from_le_bytes([lo, hi])
-    }
-
-    fn mem_write_u16(&mut self, pos: u16, data: u16) {
-        let lo = (data & 0xFF) as u8;
-        let hi = (data >> 8) as u8;
-
-        self.mem_write(pos, lo);
-        self.mem_write(pos + 1, hi);
     }
 
     fn branch(&mut self) {
@@ -150,14 +145,14 @@ impl CPU {
             AddressingMode::Absolute => self.mem_read_u16(self.pc),
 
             AddressingMode::ZeroPage_X => {
-                let pos = self.mem_read(self.pc);
-                let addr = pos.wrapping_add(self.register_x) as u16;
+                let addr = self.mem_read(self.pc);
+                let addr = addr.wrapping_add(self.register_x) as u16;
                 addr
             }
 
             AddressingMode::ZeroPage_Y => {
-                let pos = self.mem_read(self.pc);
-                let addr = pos.wrapping_add(self.register_y) as u16;
+                let addr = self.mem_read(self.pc);
+                let addr = addr.wrapping_add(self.register_y) as u16;
                 addr
             }
 
@@ -209,7 +204,9 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
+        for i in 0..(program.len() as u16) {
+            self.mem_write(0x0600 + i, program[i as usize]);
+        }
         self.mem_write_u16(0xFFFC, 0x0600);
     }
 
@@ -774,8 +771,8 @@ impl CPU {
         self.pc = self.stack_pop_u16() + 1;
     }
 
-    fn add_to_register_a(&mut self, data: u8) {
-        let mut sum = self.register_a as u16 + data as u16;
+    fn add_to_register_a(&mut self, value: u8) {
+        let mut sum = self.register_a as u16 + value as u16;
 
         // If overflow occurs the CARRY bit is clear and this enables multiple byte addition/substraction to be performed
         if self.status.contains(CpuFlag::CARRY) {
@@ -790,7 +787,7 @@ impl CPU {
 
         let result = sum as u8;
 
-        if (data ^ result) & (result ^ self.register_a) & 0b1000_0000 != 0 {
+        if (value ^ result) & (result ^ self.register_a) & 0b1000_0000 != 0 {
             self.status.insert(CpuFlag::OVERFLOW);
         } else {
             self.status.remove(CpuFlag::OVERFLOW)
@@ -801,8 +798,8 @@ impl CPU {
 
     fn sbc(&mut self, mode: &AddressingMode) {
         let addr = self.get_operand_address(&mode);
-        let data = self.mem_read(addr);
-        self.add_to_register_a(((data as i8).wrapping_neg().wrapping_sub(1)) as u8);
+        let value = self.mem_read(addr);
+        self.add_to_register_a(((value as i8).wrapping_neg().wrapping_sub(1)) as u8);
     }
 
     fn adc(&mut self, mode: &AddressingMode) {
