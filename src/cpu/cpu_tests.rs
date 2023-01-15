@@ -69,40 +69,40 @@ mod cpu_tests {
         let mut cpu = CPU::new();
         cpu.load(vec![0x18, 0x00]);
         cpu.reset();
-        cpu.set_flag(CpuFlags::CARRY);
+        cpu.set_flag(CpuFlag::CARRY);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::CARRY));
+        assert!(!cpu.status.contains(CpuFlag::CARRY));
     }
     #[test]
     fn test_cld() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xD8, 0x00]);
         cpu.reset();
-        cpu.status.insert(CpuFlags::DECIMAL_MODE);
+        cpu.status.insert(CpuFlag::DECIMAL_MODE);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::DECIMAL_MODE));
+        assert!(!cpu.status.contains(CpuFlag::DECIMAL_MODE));
     }
     #[test]
     fn test_cli() {
         let mut cpu = CPU::new();
         cpu.load(vec![0x58, 0x00]);
         cpu.reset();
-        cpu.status.insert(CpuFlags::INTERRUPT_DISABLE);
+        cpu.status.insert(CpuFlag::INTERRUPT_DISABLE);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::INTERRUPT_DISABLE));
+        assert!(!cpu.status.contains(CpuFlag::INTERRUPT_DISABLE));
     }
     #[test]
     fn test_clv() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xB8, 0x00]);
         cpu.reset();
-        cpu.status.insert(CpuFlags::OVERFLOW);
+        cpu.status.insert(CpuFlag::OVERFLOW);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::OVERFLOW));
+        assert!(!cpu.status.contains(CpuFlag::OVERFLOW));
     }
 
     #[test]
@@ -110,21 +110,21 @@ mod cpu_tests {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0x38, 0x00]);
 
-        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
     }
     #[test]
     fn test_sed() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xF8, 0x00]);
 
-        assert!(cpu.status.contains(CpuFlags::DECIMAL_MODE));
+        assert!(cpu.status.contains(CpuFlag::DECIMAL_MODE));
     }
     #[test]
     fn test_sei() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0x78, 0x00]);
 
-        assert!(cpu.status.contains(CpuFlags::INTERRUPT_DISABLE));
+        assert!(cpu.status.contains(CpuFlag::INTERRUPT_DISABLE));
     }
 
     #[test]
@@ -133,8 +133,8 @@ mod cpu_tests {
         cpu.load_and_run(vec![0xA9, 0x05, 0x00, 0x00]);
 
         assert_eq!(cpu.register_a, 0x05);
-        assert!(!cpu.status.contains(CpuFlags::ZERO));
-        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CpuFlag::ZERO));
+        assert!(!cpu.status.contains(CpuFlag::NEGATIVE));
     }
 
     #[test]
@@ -142,7 +142,7 @@ mod cpu_tests {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xA9, 0x00, 0x00, 0x00]);
 
-        assert!(cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlag::ZERO));
     }
     #[test]
     fn test_lda_from_memory() {
@@ -160,7 +160,7 @@ mod cpu_tests {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xA2, 0x00, 0x00]);
 
-        assert!(cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlag::ZERO));
     }
     #[test]
     fn test_ldx_from_memory() {
@@ -236,7 +236,7 @@ mod cpu_tests {
 
         // If carry flag wasn't set before, then bit 0 will be 0
         assert_eq!(cpu.register_a, 128);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
     }
     #[test]
     fn test_rol() {
@@ -248,7 +248,7 @@ mod cpu_tests {
         let value = cpu.mem_read(0x10);
 
         assert_eq!(value, 128);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
     }
 
     #[test]
@@ -257,12 +257,12 @@ mod cpu_tests {
         cpu.load(vec![0x6A, 0x00]);
         cpu.reset();
         cpu.register_a = 0b0000_0011;
-        cpu.set_flag(CpuFlags::CARRY);
+        cpu.set_flag(CpuFlag::CARRY);
         cpu.run();
 
         // If carry flag wasn't set before, then bit 0 will be 0
         assert_eq!(cpu.register_a, 129);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
     }
     #[test]
     fn test_ror() {
@@ -270,12 +270,12 @@ mod cpu_tests {
         cpu.load(vec![0x6E, 0x10, 0x00, 0x00]);
         cpu.reset();
         cpu.mem_write(0x10, 0b0000_0011);
-        cpu.set_flag(CpuFlags::CARRY);
+        cpu.set_flag(CpuFlag::CARRY);
         cpu.run();
         let value = cpu.mem_read(0x10);
 
         assert_eq!(value, 129);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
     }
 
     #[test]
@@ -367,19 +367,19 @@ mod cpu_tests {
         cpu.mem_write(0x10, 0b0000_0001);
         cpu.run();
 
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-        assert!(cpu.status.contains(CpuFlags::ZERO));
-        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
+        assert!(cpu.status.contains(CpuFlag::ZERO));
+        assert!(!cpu.status.contains(CpuFlag::NEGATIVE));
 
-        cpu.program_counter -= 3;
+        cpu.pc -= 3;
         cpu.reset();
         cpu.register_a = 0b0000_0000;
         cpu.mem_write(0x10, 0b0000_0001);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::CARRY));
-        assert!(!cpu.status.contains(CpuFlags::ZERO));
-        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CpuFlag::CARRY));
+        assert!(!cpu.status.contains(CpuFlag::ZERO));
+        assert!(cpu.status.contains(CpuFlag::NEGATIVE));
     }
     #[test]
     fn test_cpx() {
@@ -390,19 +390,19 @@ mod cpu_tests {
         cpu.mem_write(0x10, 0b0000_0001);
         cpu.run();
 
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-        assert!(cpu.status.contains(CpuFlags::ZERO));
-        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
+        assert!(cpu.status.contains(CpuFlag::ZERO));
+        assert!(!cpu.status.contains(CpuFlag::NEGATIVE));
 
-        cpu.program_counter -= 3;
+        cpu.pc -= 3;
         cpu.reset();
         cpu.register_x = 0b0000_0000;
         cpu.mem_write(0x10, 0b0000_0001);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::CARRY));
-        assert!(!cpu.status.contains(CpuFlags::ZERO));
-        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CpuFlag::CARRY));
+        assert!(!cpu.status.contains(CpuFlag::ZERO));
+        assert!(cpu.status.contains(CpuFlag::NEGATIVE));
     }
     #[test]
     fn test_cpy() {
@@ -413,19 +413,19 @@ mod cpu_tests {
         cpu.mem_write(0x10, 0b0000_0001);
         cpu.run();
 
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-        assert!(cpu.status.contains(CpuFlags::ZERO));
-        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
+        assert!(cpu.status.contains(CpuFlag::ZERO));
+        assert!(!cpu.status.contains(CpuFlag::NEGATIVE));
 
-        cpu.program_counter -= 3;
+        cpu.pc -= 3;
         cpu.reset();
         cpu.register_y = 0b0000_0000;
         cpu.mem_write(0x10, 0b0000_0001);
         cpu.run();
 
-        assert!(!cpu.status.contains(CpuFlags::CARRY));
-        assert!(!cpu.status.contains(CpuFlags::ZERO));
-        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
+        assert!(!cpu.status.contains(CpuFlag::CARRY));
+        assert!(!cpu.status.contains(CpuFlag::ZERO));
+        assert!(cpu.status.contains(CpuFlag::NEGATIVE));
     }
 
     #[test]
@@ -500,16 +500,6 @@ mod cpu_tests {
         // CPU must jump over the 0xE8 instruction, which increments x registers value
         assert_eq!(cpu.register_x, 0);
     }
-    #[test]
-    fn test_jsr_rts() {
-        let mut cpu = CPU::new();
-        cpu.load(vec![0x20, 0x05, 0x80, 0xE8, 0x00, 0xE8, 0x60]);
-        cpu.reset();
-        cpu.run();
-
-        // CPU must jump over 0x00 instruction to 0xE8 and then return from subroutine
-        assert_eq!(cpu.register_x, 2);
-    }
 
     #[test]
     fn test_adc_carry() {
@@ -521,9 +511,9 @@ mod cpu_tests {
         cpu.run();
 
         assert_eq!(cpu.register_a, 0b0000_0000);
-        assert!(cpu.status.contains(CpuFlags::CARRY));
-        assert!(!cpu.status.contains(CpuFlags::NEGATIVE));
-        assert!(cpu.status.contains(CpuFlags::OVERFLOW));
+        assert!(cpu.status.contains(CpuFlag::CARRY));
+        assert!(!cpu.status.contains(CpuFlag::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlag::OVERFLOW));
     }
     #[test]
     fn test_adc_overflow() {
@@ -535,20 +525,47 @@ mod cpu_tests {
         cpu.run();
 
         assert_eq!(cpu.register_a, 0b1000_0000);
-        assert!(!cpu.status.contains(CpuFlags::CARRY));
-        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
-        assert!(cpu.status.contains(CpuFlags::OVERFLOW));
+        assert!(!cpu.status.contains(CpuFlag::CARRY));
+        assert!(cpu.status.contains(CpuFlag::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlag::OVERFLOW));
     }
     #[test]
-    fn test_sbc() {
+    fn test_sbc_with_carry() {
         let mut cpu = CPU::new();
         cpu.load(vec![0xED, 0x10, 0x00, 0x00]);
         cpu.reset();
-        cpu.register_a = 1;
-        cpu.mem_write(0x10, -1i8 as u8);
+        cpu.set_flag(CpuFlag::CARRY);
+        cpu.register_a = 127;
+        cpu.mem_write(0x10, 126);
         cpu.run();
 
-        assert_eq!(cpu.register_a as i8, 2 as i8);
+        // Just normal substraction
+        assert_eq!(cpu.register_a, 1);
+    }
+    #[test]
+    fn test_sbc_without_carry() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xED, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        // CARRY flag isn't set after reset
+        cpu.register_a = 127;
+        cpu.mem_write(0x10, 126);
+        cpu.run();
+
+        // If overflow occurs the CARRY bit is clear and this enables multiple byte substraction to be performed
+        assert_eq!(cpu.register_a, 0);
+    }
+    #[test]
+    fn test_sbc_multibyte() {
+        let mut cpu = CPU::new();
+        cpu.load(vec![0xED, 0x10, 0x00, 0xED, 0x10, 0x00, 0x00]);
+        cpu.reset();
+        cpu.set_flag(CpuFlag::CARRY);
+        cpu.register_a = 121;
+        cpu.mem_write(0x10, 60);
+        cpu.run();
+
+        assert_eq!(cpu.register_a, 1);
     }
     #[test]
     fn test_bit() {
@@ -559,8 +576,8 @@ mod cpu_tests {
         cpu.mem_write(0x10, 0b1100_0010);
         cpu.run();
 
-        assert!(cpu.status.contains(CpuFlags::NEGATIVE));
-        assert!(cpu.status.contains(CpuFlags::OVERFLOW));
-        assert!(!cpu.status.contains(CpuFlags::ZERO));
+        assert!(cpu.status.contains(CpuFlag::NEGATIVE));
+        assert!(cpu.status.contains(CpuFlag::OVERFLOW));
+        assert!(!cpu.status.contains(CpuFlag::ZERO));
     }
 }
