@@ -23,7 +23,7 @@ impl StackPtr {
     }
 
     pub fn addr(&self) -> u16 {
-        (STACK as u16) + self.addr as u16
+        STACK + self.addr as u16
     }
     pub fn rel_addr(&self) -> u8 {
         self.addr

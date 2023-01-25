@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::cpu::AddressingMode;
+use crate::cpu::AddressingMode;
 
 // If addressing mode is Absolute_X/Y or Indirect_Y there will be 1 more cycle if page is crossed
 // https://www.nesdev.org/obelisk-6502-guide/reference.html
