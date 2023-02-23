@@ -12,7 +12,7 @@ const CHR_ROM_PAGE_SIZE: usize = 8192;
 pub struct Rom {
     pub prg_rom: Vec<u8>,
     pub chr_rom: Vec<u8>,
-    pub mapper: u8,
+    mapper: u8,
     pub screen_mirroring: Mirroring,
 }
 

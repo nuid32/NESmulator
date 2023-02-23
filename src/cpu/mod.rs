@@ -1,23 +1,24 @@
 pub mod opcode;
 mod stackptr;
 
-use crate::{bus::Bus, memory::Memory, rom::Rom};
+use crate::{bus::Bus, rom::Rom};
 
 use bitflags::bitflags;
 use opcode::OPCODES_MAP;
 use stackptr::StackPtr;
 
 bitflags! {
-// NV2B DIZC
-// |||| ||||
-// |||| |||+- Carry
-// |||| ||+-- Zero
-// |||| |+--- Interrupt Disable
-// |||| +---- Decimal
-// |||+------ Break
-// ||+------- Break2
-// |+-------- Overflow
-// +--------- Negative
+/* NV2B DIZC
+   |||| ||||
+   |||| |||+- Carry
+   |||| ||+-- Zero
+   |||| |+--- Interrupt Disable
+   |||| +---- Decimal
+   |||+------ Break
+   ||+------- Break2
+   |+-------- Overflow
+   +--------- Negative
+ */
     pub struct CpuFlag: u8 {
         const CARRY             = 0b0000_0001;
         const ZERO              = 0b0000_0010;
@@ -46,20 +47,32 @@ pub enum AddressingMode {
 }
 
 pub struct Cpu {
-    pub register_a: u8,
-    pub register_x: u8,
-    pub register_y: u8,
-    pub stackptr: StackPtr,
-    pub status: CpuFlag,
-    pub pc: u16, // Program Counter
-    pub bus: Bus,
+    register_a: u8,
+    register_x: u8,
+    register_y: u8,
+    stackptr: StackPtr,
+    status: CpuFlag,
+    pc: u16, // Program Counter
+    bus: Bus,
 }
 
-impl Memory for Cpu {
-    fn mem_read(&self, addr: u16) -> u8 {
+impl Cpu {
+    pub fn new(rom: Rom) -> Self {
+        Cpu {
+            register_a: 0,
+            register_x: 0,
+            register_y: 0,
+            stackptr: StackPtr::new(),
+            status: CpuFlag::from_bits_truncate(0b00100100),
+            pc: 0,
+            bus: Bus::new(rom),
+        }
+    }
+
+    fn mem_read(&mut self, addr: u16) -> u8 {
         self.bus.mem_read(addr)
     }
-    fn mem_read_u16(&self, addr: u16) -> u16 {
+    fn mem_read_u16(&mut self, addr: u16) -> u16 {
         self.bus.mem_read_u16(addr)
     }
 
@@ -68,20 +81,6 @@ impl Memory for Cpu {
     }
     fn mem_write_u16(&mut self, addr: u16, value: u16) {
         self.bus.mem_write_u16(addr, value);
-    }
-}
-
-impl Cpu {
-    pub fn new() -> Self {
-        Cpu {
-            register_a: 0,
-            register_x: 0,
-            register_y: 0,
-            stackptr: StackPtr::new(),
-            status: CpuFlag::from_bits_truncate(0b00100100),
-            pc: 0,
-            bus: Bus::new(),
-        }
     }
 
     fn branch(&mut self) {
@@ -138,7 +137,7 @@ impl Cpu {
         self.update_zero_and_negative_flags(self.register_y);
     }
 
-    pub fn get_absolute_address(&self, mode: &AddressingMode, addr: u16) -> u16 {
+    pub fn get_absolute_address(&mut self, mode: &AddressingMode, addr: u16) -> u16 {
         match mode {
             AddressingMode::Immediate => addr,
             AddressingMode::ZeroPage => self.mem_read(addr) as u16,
@@ -195,14 +194,6 @@ impl Cpu {
     }
     fn get_address(&mut self, mode: &AddressingMode) -> u16 {
         self.get_absolute_address(mode, self.pc)
-    }
-
-    pub fn insert_rom(&mut self, rom: Rom) {
-        self.bus.insert_rom(rom);
-    }
-
-    pub fn remove_rom(&mut self) {
-        self.bus.remove_rom();
     }
 
     pub fn reset(&mut self) {

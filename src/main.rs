@@ -5,6 +5,7 @@
 mod bus;
 mod cpu;
 mod memory;
+mod ppu;
 mod rom;
 
 fn main() {
