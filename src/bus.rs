@@ -17,8 +17,6 @@ impl Bus {
         }
     }
 
-    // TODO Set PC to 0xFFFC value
-
     fn read_prg_rom(&self, mut addr: u16) -> u8 {
         addr -= 0x8000;
         if self.prg_rom.len() == 0x4000 && addr >= 0x4000 {
@@ -29,10 +27,10 @@ impl Bus {
     }
 
     // https://www.youtube.com/watch?v=fWqBmmPQP40&t=41m44s
-    pub fn write_init_pc_addr(&mut self, addr: u16) {
+    pub fn write_initial_pc_addr(&mut self, addr: u16) {
         self.mem_write_u16(0xFFFC, addr);
     }
-    pub fn read_init_pc_addr(&mut self) -> u16 {
+    pub fn read_initial_pc_addr(&mut self) -> u16 {
         self.mem_read_u16(0xFFFC)
     }
 

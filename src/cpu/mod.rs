@@ -203,14 +203,14 @@ impl Cpu {
         self.stackptr.reset();
         self.status = CpuFlag::from_bits_truncate(0b0010_0100);
 
-        self.pc = self.bus.read_init_pc_addr();
+        self.pc = self.bus.read_initial_pc_addr();
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
         for i in 0..(program.len() as u16) {
             self.mem_write(0x0600 + i, program[i as usize]);
         }
-        self.bus.write_init_pc_addr(0x0600);
+        self.bus.write_initial_pc_addr(0x0600);
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {

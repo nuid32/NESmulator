@@ -58,6 +58,7 @@ impl Ppu {
 
     pub fn write_to_address(&mut self, value: u8) {
         self.reg_address.update(value, self.address_latch);
+        self.address_latch = true;
     }
 
     pub fn write_to_control(&mut self, value: u8) {
@@ -70,6 +71,7 @@ impl Ppu {
 
     pub fn write_to_scroll(&mut self, value: u8) {
         self.reg_scroll.update(value, self.address_latch);
+        self.address_latch = true;
     }
 
     pub fn write_to_oam_addr(&mut self, value: u8) {
