@@ -3,6 +3,7 @@ use crate::{ppu::Ppu, rom::Rom};
 pub struct Bus {
     cpu_wram: [u8; 2048],
     open_bus: u8,
+    ppu_open_bus: u8,
     prg_rom: Vec<u8>,
     ppu: Ppu,
 }
@@ -12,6 +13,7 @@ impl Bus {
         Bus {
             cpu_wram: [0; 2048],
             open_bus: 0,
+            ppu_open_bus: 0,
             prg_rom: rom.prg_rom,
             ppu: Ppu::new(rom.chr_rom, rom.screen_mirroring),
         }
@@ -49,6 +51,7 @@ impl Bus {
         self.mem_write(addr + 1, hi);
     }
 
+    // XXX Maybe I misunderstood open bus behavior
     pub fn mem_read(&mut self, addr: u16) -> u8 {
         match addr {
             // RAM to it's mirrors end
@@ -58,22 +61,51 @@ impl Bus {
                 self.open_bus = value;
                 value
             }
-            0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 | 0x4014 => {
-                panic!("Attempt to read from write-only PPU address ({:x})", addr);
+            // Write-only PPU ports
+            0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => {
+                self.open_bus = self.ppu_open_bus;
+                self.ppu_open_bus
             }
             // Status
-            0x2002 => self.ppu.get_status(),
+            0x2002 => {
+                let status = self.ppu.get_status();
+
+                // Reading the PPU's status port loads bits 7-5 only
+                self.ppu_open_bus &= 0b0001_1111;
+                self.ppu_open_bus |= status;
+                self.open_bus = status;
+
+                status
+            }
             // OAM data
-            0x2004 => self.ppu.read_from_oam_data(addr),
+            0x2004 => {
+                let value = self.ppu.read_from_oam_data(addr);
+                self.ppu_open_bus = value;
+                self.open_bus = value;
+                value
+            }
             // Data
-            0x2007 => self.ppu.read(),
+            0x2007 => {
+                let value = self.ppu.read();
+                self.ppu_open_bus = value;
+                self.open_bus = value;
+                value
+            }
             // Mirrors of PPU's registers
             0x2008..=0x3FFF => {
                 let mirrored_down_addr = addr & 0b0010_0000_0000_0111;
+                // Open bus will be modified after mirrored read
                 self.mem_read(mirrored_down_addr)
             }
+            0x4016..=0x4017 => {
+                todo!("Emulate joypads and open bus behavior (affects bits 4-0 only) here")
+            }
             // ROM PRG
-            0x8000..=0xFFFF => self.read_prg_rom(addr),
+            0x8000..=0xFFFF => {
+                let value = self.read_prg_rom(addr);
+                self.open_bus = value;
+                value
+            }
             _ => self.open_bus,
         }
     }
@@ -87,17 +119,37 @@ impl Bus {
                 self.cpu_wram[mirrored_down_addr as usize] = value;
             }
             // Control
-            0x2000 => self.ppu.write_to_control(value),
+            0x2000 => {
+                self.ppu_open_bus = value;
+                self.ppu.write_to_control(value);
+            }
             // Mask
-            0x2001 => self.ppu.write_to_mask(value),
+            0x2001 => {
+                self.ppu_open_bus = value;
+                self.ppu.write_to_mask(value);
+            }
+            // Status (read-only)
+            0x2002 => self.ppu_open_bus = value,
             // OAM data
-            0x2004 => self.ppu.write_to_oam_data(value),
+            0x2004 => {
+                self.ppu_open_bus = value;
+                self.ppu.write_to_oam_data(value);
+            }
             // Scroll
-            0x2005 => self.ppu.write_to_scroll(value),
+            0x2005 => {
+                self.ppu_open_bus = value;
+                self.ppu.write_to_scroll(value);
+            }
             // Address
-            0x2006 => self.ppu.write_to_address(value),
+            0x2006 => {
+                self.ppu_open_bus = value;
+                self.ppu.write_to_address(value);
+            }
             // Data
-            0x2007 => self.ppu.write(value),
+            0x2007 => {
+                self.ppu_open_bus = value;
+                self.ppu.write(value);
+            }
             // Mirrors of PPU's registers
             0x2008..=0x3FFF => {
                 let mirrored_down_addr = addr & 0b0010_0000_0000_0111;
@@ -105,6 +157,7 @@ impl Bus {
             }
             // OAM DMA
             0x4014 => {
+                self.ppu_open_bus = value;
                 // Copy all from XX00 to XXFF to the PPU's OAM
                 let page = &self.cpu_wram[((value as usize) << 8)..((value as usize) << 8 + 256)];
                 self.ppu.write_oam_dma(page);
@@ -114,7 +167,7 @@ impl Bus {
                 panic!("Attempt to write to Cartridge ROM space ({:x})", addr)
             }
             _ => {
-                panic!("Attempt to write to {:x}", addr);
+                panic!("Attempt to write to {:x}", addr)
             }
         }
     }

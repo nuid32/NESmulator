@@ -121,7 +121,7 @@ impl Ppu {
         self.increment_vram_addr();
 
         match addr {
-            0..=0x1FFF => {
+            0x0000..=0x1FFF => {
                 let result = self.internal_data_buffer;
                 self.internal_data_buffer = self.chr_rom[addr as usize];
                 result
@@ -141,7 +141,7 @@ impl Ppu {
         let addr = self.reg_address.get_addr();
 
         match addr {
-            0..=0x1FF => panic!("Attempt to write to CHR ROM space ({:x})", addr),
+            0x0000..=0x1FFF => panic!("Attempt to write to CHR ROM space ({:x})", addr),
             0x2000..=0x2007 => unreachable!(),
             0x2008..=0x2FFF => self.vram[self.mirror_vram_addr(addr) as usize] = value,
             0x3000..=0x3EFF => panic!("Address space 0x3000..0x3EFF is not expected to be used"),
