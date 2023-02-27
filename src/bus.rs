@@ -27,6 +27,7 @@ impl Bus {
     }
 
     // https://www.youtube.com/watch?v=fWqBmmPQP40&t=41m44s
+    // TODO: remove debug code
     pub fn write_initial_pc_addr(&mut self, addr: u16) {
         self.mem_write_u16(0xFFFC, addr);
     }

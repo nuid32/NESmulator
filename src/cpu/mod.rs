@@ -63,7 +63,7 @@ impl Cpu {
             register_x: 0,
             register_y: 0,
             stackptr: StackPtr::new(),
-            status: CpuFlag::from_bits_truncate(0b00100100),
+            status: CpuFlag::from_bits_truncate(0b0010_0100),
             pc: 0,
             bus: Bus::new(rom),
         }
@@ -196,6 +196,30 @@ impl Cpu {
         self.get_absolute_address(mode, self.pc)
     }
 
+    pub fn nmi(&mut self) {
+        self.stack_push_u16(self.pc);
+
+        self.set_flag(CpuFlag::INTERRUPT_DISABLE);
+        self.clear_flag(CpuFlag::BREAK);
+        self.set_flag(CpuFlag::BREAK2);
+        self.stack_push(self.status.bits);
+
+        // TODO remove when modules relationships will be restructured
+        self.pc = self.bus.mem_read_u16(0xFFFA);
+    }
+
+    pub fn irq(&mut self) {
+        self.stack_push_u16(self.pc);
+
+        self.set_flag(CpuFlag::INTERRUPT_DISABLE);
+        self.clear_flag(CpuFlag::BREAK);
+        self.set_flag(CpuFlag::BREAK2);
+        self.stack_push(self.status.bits);
+
+        // TODO remove when modules relationships will be restructured
+        self.pc = self.bus.mem_read_u16(0xFFFE);
+    }
+
     pub fn reset(&mut self) {
         self.register_a = 0;
         self.register_x = 0;
@@ -210,6 +234,7 @@ impl Cpu {
         for i in 0..(program.len() as u16) {
             self.mem_write(0x0600 + i, program[i as usize]);
         }
+        // TODO: remove debug code
         self.bus.write_initial_pc_addr(0x0600);
     }
 
