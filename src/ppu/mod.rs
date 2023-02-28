@@ -12,7 +12,6 @@ use bitflags::bitflags;
    |+-------- Sprite 0 Hit
    +--------- Vertical blank has started
 */
-
 bitflags! {
   pub struct PpuFlags: u8 {
     const OVERFLOW        = 0b0010_0000;
@@ -29,11 +28,10 @@ pub struct Ppu {
     reg_scroll: ScrollRegister,
     status: PpuFlags,
     chr_rom: Vec<u8>,
-    palette_table: [u8; 32],
     vram: [u8; 2048],
     oam_address: u8,
     oam_data: [u8; 256],
-    internal_data_buffer: u8,
+    data_buffer: u8,
     mirroring: Mirroring,
 }
 
@@ -47,11 +45,10 @@ impl Ppu {
             reg_mask: MaskRegister::new(),
             reg_scroll: ScrollRegister::new(),
             status: PpuFlags::from_bits_truncate(0b1010_0000),
-            palette_table: [0; 32],
             vram: [0; 2048],
             oam_address: 0,
             oam_data: [0; 64 * 4],
-            internal_data_buffer: 0,
+            data_buffer: 0,
             mirroring,
         }
     }
@@ -121,37 +118,51 @@ impl Ppu {
         self.increment_vram_addr();
 
         match addr {
+            // CHR ROM
             0x0000..=0x1FFF => {
-                let result = self.internal_data_buffer;
-                self.internal_data_buffer = self.chr_rom[addr as usize];
+                let result = self.data_buffer;
+                self.data_buffer = self.chr_rom[addr as usize];
                 result
             }
-            0x2000..=0x2007 => unreachable!(),
+            // Registers
+            0x2000..=0x2007 => todo!("Log attempt to read from register"),
+            // VRAM
             0x2008..=0x2FFF => {
-                let result = self.internal_data_buffer;
-                self.internal_data_buffer = self.vram[self.mirror_vram_addr(addr) as usize];
-                result
+                let value = self.data_buffer;
+                self.data_buffer = self.vram[self.mirror_vram_addr(addr) as usize];
+                value
             }
-            0x3000..=0x3EFF => panic!("Address space 0x3000..0x3EFF is not expected to be used"),
-            0x3F00..=0x3FFF => self.palette_table[(addr - 0x3F00) as usize],
-            _ => panic!("Unexpected access to mirrored space ({:x})", addr),
+            // Mirrors of VRAM
+            0x3000..=0x3EFF => {
+                let value = self.data_buffer;
+                self.data_buffer = self.vram[self.mirror_vram_addr(addr - 0x1000) as usize];
+                value
+            }
+            // Palette table and mirrors
+            0x3F00..=0x3FFF => {
+                // XXX Danger place. Maybe data buffer update value is in another castle
+                // Not mirrored to palette
+                self.data_buffer = self.vram[self.mirror_vram_addr(addr - 0x1000) as usize];
+                self.vram[((addr - 0x3F00) % 0x0020 + 0x3F00) as usize]
+            }
+            _ => panic!("No such address in PPU: {:x}", addr),
         }
     }
     pub fn write(&mut self, value: u8) {
         let addr = self.reg_address.get_addr();
 
         match addr {
-            0x0000..=0x1FFF => panic!("Attempt to write to CHR ROM space ({:x})", addr),
-            0x2000..=0x2007 => unreachable!(),
+            // CHR ROM
+            0x0000..=0x1FFF => todo!("Log attempt to write to CHR ROM space ({:x})", addr),
+            // Registers
+            0x2000..=0x2007 => todo!("Log attempt to write to register"),
+            // VRAM
             0x2008..=0x2FFF => self.vram[self.mirror_vram_addr(addr) as usize] = value,
-            0x3000..=0x3EFF => panic!("Address space 0x3000..0x3EFF is not expected to be used"),
-            // These addresses are mirrors
-            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => {
-                let addr = addr - 0x10;
-                self.palette_table[(addr - 0x3F00) as usize] = value;
-            }
-            0x3F00..=0x3FFF => self.palette_table[(addr - 0x3F00) as usize] = value,
-            _ => panic!("Unexpected access to mirrored space ({:x})", addr),
+            // Mirrors of VRAM
+            0x3000..=0x3EFF => self.vram[self.mirror_vram_addr(addr - 0x1000) as usize] = value,
+            // Palette table and mirrors
+            0x3F00..=0x3FFF => self.vram[((addr - 0x3F00) % 0x0020 + 0x3F00) as usize] = value,
+            _ => panic!("No such address in PPU: {:x}", addr),
         }
         self.increment_vram_addr();
     }

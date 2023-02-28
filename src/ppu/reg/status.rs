@@ -18,7 +18,6 @@ use bitflags::bitflags;
               line); cleared after reading $2002 and at dot 1 of the
               pre-render line.
 */
-
 bitflags! {
   pub struct PpuFlags: u8 {
     const OVERFLOW        = 0b0010_0000;
