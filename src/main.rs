@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 
 mod bus;
+mod console;
 mod cpu;
 mod ppu;
 mod rom;

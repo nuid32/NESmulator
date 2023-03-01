@@ -1,7 +1,9 @@
 pub mod opcode;
 mod stackptr;
 
-use crate::{bus::Bus, rom::Rom};
+use std::{cell::RefCell, rc::Rc};
+
+use crate::bus::Bus;
 
 use bitflags::bitflags;
 use opcode::OPCODES_MAP;
@@ -53,11 +55,11 @@ pub struct Cpu {
     stackptr: StackPtr,
     status: CpuFlag,
     pc: u16, // Program Counter
-    bus: Bus,
+    bus: Rc<RefCell<Bus>>,
 }
 
 impl Cpu {
-    pub fn new(rom: Rom) -> Self {
+    pub fn new(bus: Rc<RefCell<Bus>>) -> Self {
         Cpu {
             register_a: 0,
             register_x: 0,
@@ -65,22 +67,31 @@ impl Cpu {
             stackptr: StackPtr::new(),
             status: CpuFlag::from_bits_truncate(0b0010_0100),
             pc: 0,
-            bus: Bus::new(rom),
+            bus,
         }
     }
 
     fn mem_read(&mut self, addr: u16) -> u8 {
-        self.bus.mem_read(addr)
+        self.bus.borrow_mut().mem_read(addr)
     }
     fn mem_read_u16(&mut self, addr: u16) -> u16 {
-        self.bus.mem_read_u16(addr)
+        self.bus.borrow_mut().mem_read_u16(addr)
     }
 
     fn mem_write(&mut self, addr: u16, value: u8) {
-        self.bus.mem_write(addr, value);
+        self.bus.borrow_mut().mem_write(addr, value);
     }
     fn mem_write_u16(&mut self, addr: u16, value: u16) {
-        self.bus.mem_write_u16(addr, value);
+        self.bus.borrow_mut().mem_write_u16(addr, value);
+    }
+
+    // https://www.youtube.com/watch?v=fWqBmmPQP40&t=41m44s
+    // TODO: remove debug code
+    pub fn write_initial_pc_addr(&mut self, addr: u16) {
+        self.mem_write_u16(0xFFFC, addr);
+    }
+    pub fn read_initial_pc_addr(&mut self) -> u16 {
+        self.mem_read_u16(0xFFFC)
     }
 
     fn branch(&mut self) {
@@ -205,7 +216,7 @@ impl Cpu {
         self.stack_push(self.status.bits);
 
         // TODO remove when modules relationships will be restructured
-        self.pc = self.bus.mem_read_u16(0xFFFA);
+        self.pc = self.mem_read_u16(0xFFFA);
     }
 
     pub fn irq(&mut self) {
@@ -217,7 +228,7 @@ impl Cpu {
         self.stack_push(self.status.bits);
 
         // TODO remove when modules relationships will be restructured
-        self.pc = self.bus.mem_read_u16(0xFFFE);
+        self.pc = self.mem_read_u16(0xFFFE);
     }
 
     pub fn reset(&mut self) {
@@ -227,7 +238,7 @@ impl Cpu {
         self.stackptr.reset();
         self.status = CpuFlag::from_bits_truncate(0b0010_0100);
 
-        self.pc = self.bus.read_initial_pc_addr();
+        self.pc = self.read_initial_pc_addr();
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
@@ -235,7 +246,7 @@ impl Cpu {
             self.mem_write(0x0600 + i, program[i as usize]);
         }
         // TODO: remove debug code
-        self.bus.write_initial_pc_addr(0x0600);
+        self.write_initial_pc_addr(0x0600);
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {

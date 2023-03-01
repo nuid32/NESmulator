@@ -28,15 +28,6 @@ impl Bus {
         self.prg_rom[addr as usize]
     }
 
-    // https://www.youtube.com/watch?v=fWqBmmPQP40&t=41m44s
-    // TODO: remove debug code
-    pub fn write_initial_pc_addr(&mut self, addr: u16) {
-        self.mem_write_u16(0xFFFC, addr);
-    }
-    pub fn read_initial_pc_addr(&mut self) -> u16 {
-        self.mem_read_u16(0xFFFC)
-    }
-
     pub fn mem_read_u16(&mut self, addr: u16) -> u16 {
         let lo = self.mem_read(addr);
         let hi = self.mem_read(addr + 1);
